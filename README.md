@@ -7,186 +7,172 @@
          │   Task Packaging Standard    │
          │     for AI Agents            │
          ╰──────────────────────────────╯
-
-      🦞 Lobsters crack nutshells.
-         Agents crack Nutshell bundles.
 ```
 
 # Nutshell
 
 **An open standard for packaging task context that AI agents can understand.**
 
-[Specification](spec/nutshell-spec-v0.1.0.md) · [Examples](examples/) · [Research](docs/harness-engineering-research.md)
+Works with any agent: Claude Code · Copilot · Cursor · Aider · Custom agents
+
+[Specification](spec/nutshell-spec-v0.2.0.md) · [Examples](examples/) · [Research](docs/harness-engineering-research.md)
 
 </div>
 
 ---
 
+## The Problem
+
+AI coding agents are powerful, but they keep asking the same questions:
+
+```
+Agent: "What framework? What database? Where's the schema?
+        How do I authenticate? What are the acceptance criteria?
+        Can I access the staging environment?"
+Human: *sends 47 messages over 3 days, losing context each time*
+```
+
+Every time you start a new session, you re-explain the same context. Credentials get shared over Slack. Requirements live in your head. There's no record of what was done or why.
+
+## The Solution
+
+**Nutshell** packages everything an AI agent needs into one bundle:
+
+```
+$ nutshell init
+$ nutshell check
+
+  🐚 Nutshell Completeness Check
+
+  ✓ task.title: "Build REST API for User Management"
+  ✓ task.summary: provided
+  ✓ context/requirements.md: exists (2.1 KB)
+  ✗ context/architecture.md: referenced but missing
+  ✗ credentials: no vault — agent won't have DB access
+  ⚠ acceptance: no test scripts — agent can't self-verify
+
+  Status: INCOMPLETE — 2 items need attention before agent can start
+```
+
+Nutshell tells **you** what's missing. Fill the gaps, pack it, and hand it to any agent:
+
+```
+$ nutshell pack -o task.nut       # Human packs the task
+$ nutshell inspect task.nut       # Agent sees everything it needs
+# ... agent executes ...
+$ nutshell pack -o delivery.nut   # Agent delivers results
+```
+
+---
+
 ## Why Nutshell?
 
-The **Harness Engineering** movement has revealed a fundamental truth: **the bottleneck in AI agent systems isn't model intelligence — it's infrastructure.** Five independent teams at OpenAI, Anthropic, Stripe, and beyond reached the same conclusion.
+| Without Nutshell | With Nutshell |
+|-----------------|---------------|
+| Context scattered across Slack, docs, email | One `.nut` bundle with everything |
+| Agent asks 20 questions before starting | Agent reads manifest, starts immediately |
+| Credentials shared insecurely | Encrypted vault with scoped, time-bounded tokens |
+| No record of what was requested or delivered | Request + delivery bundles form a complete audit trail |
+| New session = re-explain everything | Bundle persists across sessions |
+| No way to verify completion | Machine-readable acceptance criteria |
 
-Yet there's no standard way to package a task so an agent can reliably execute it. Today's workflows look like this:
+### Standalone by Design
 
-```
-Human: "Hey agent, build me a REST API"
-Agent: "What framework? What database? Where's the schema? How do I authenticate?
-        What are the acceptance criteria? Can I access the staging environment?"
-Human: *sends 47 Slack messages over 3 days*
+Nutshell works **without any external platform**. A single developer with Claude Code benefits right away:
+
+1. **Define** — `nutshell init` creates a structured task directory
+2. **Check** — `nutshell check` tells you what's missing (credentials? architecture docs? acceptance criteria?)
+3. **Pack** — `nutshell pack` compresses it into a `.nut` bundle
+4. **Execute** — Hand the bundle to any AI agent
+5. **Archive** — Delivery bundles document what was built and why
+
+### Platform Extensions (Optional)
+
+Want to publish tasks to a marketplace? Nutshell supports optional extensions:
+
+```jsonc
+{
+  "extensions": {
+    "clawnet": {                    // P2P agent network
+      "peer_id": "12D3KooW...",
+      "reward": {"amount": 50, "currency": "energy"}
+    },
+    "linear": {"issue_id": "ENG-1234"},
+    "github-actions": {"workflow": "agent-task.yml"}
+  }
+}
 ```
 
-**Nutshell fixes this.** One bundle. Everything the agent needs. In a shell.
+Extensions never break the core format. Tools ignore what they don't understand.
 
-```
-Human: nutshell pack → task.nut → Agent unpacks → executes → delivery.nut
-```
+---
 
 ## 🐚 The Name
 
 > **龍蝦吃貝殼** — *Lobsters eat shellfish.*
 
-[ClawNet](https://github.com/ChatChatTech/ClawNet) (🦞) is a decentralized P2P network where AI agents find tasks, match skills, and earn reputation. The lobster network needs food — and that food comes in shells.
+[ClawNet](https://github.com/ChatChatTech/ClawNet) (🦞) is a decentralized AI agent network. Agents are lobsters. They need food — and food comes in shells. **Nutshell** (🐚) is the shell — compact, nutrient-rich, ready to crack open.
 
-**Nutshell** (🐚) is the shell — a compact, nutrient-rich package that contains everything a task needs. The lobster (agent) cracks it open, extracts the good stuff, digests it, and produces results.
-
-| Concept | Metaphor | Role |
-|---------|----------|------|
-| ClawNet | 🦞 Lobster Network | Discovers tasks, matches agents, rewards work |
-| Nutshell | 🐚 Shell/贝壳 | Packages task context for agent consumption |
-| `.nut` bundle | 🥜 The nut inside | Compressed, structured, ready to crack |
-| Delivery | 🦪 Pearl | The valuable output the agent produces |
+But you don't need to be a lobster. Any agent can eat a nutshell.
 
 ---
-
-## Core Concepts
-
-### Harness Engineering Alignment
-
-Nutshell is built on the [four pillars of Harness Engineering](docs/harness-engineering-research.md):
-
-| Pillar | Nutshell Implementation |
-|--------|------------------------|
-| **Context Architecture** | Tiered bundle structure — Tier 1 manifest, Tier 2 context docs, Tier 3 files & APIs |
-| **Agent Specialization** | `harness.agent_type_hint` tells the network which agent role fits best |
-| **Persistent Memory** | Delivery bundles include execution logs, decision records, and checkpoint history |
-| **Structured Execution** | Separated requirements (request bundle) from execution (delivery bundle) with machine-readable acceptance criteria |
-
-### The 40% Rule
-
-Research shows agent performance degrades when context windows exceed ~40% utilization. Nutshell enforces this through:
-
-- **`context_budget_hint`** — Publisher specifies target context utilization
-- **Tiered loading** — Agents load Tier 1 (manifest) first, expand Tier 2/3 on demand
-- **Nutcracker compression** — Context-aware compression that minimizes token count
-
-### Credentials as First-Class Citizens
-
-The most innovative aspect of Nutshell: **shared, scoped, time-bounded credentials**.
-
-```json
-{
-  "credentials": {
-    "vault": "credentials/vault.enc.json",
-    "encryption": "age",
-    "scopes": [
-      {
-        "name": "staging-db",
-        "type": "postgresql",
-        "access_level": "read-write",
-        "expires_at": "2026-03-21T10:00:00Z"
-      }
-    ]
-  }
-}
-```
-
-Agents need the same access as human engineers — not as an afterthought, but as a first-class design element. Nutshell makes this secure, auditable, and revocable.
-
----
-
-## Bundle Structure
-
-```
-task.nut                        🐚 The shell
-├── nutshell.json               📋 Tier 1: Manifest (always loaded first)
-├── context/                    📖 Tier 2: Detailed context
-│   ├── requirements.md
-│   ├── architecture.md
-│   └── references.md
-├── files/                      📦 Tier 3: Source files & assets
-│   ├── src/
-│   ├── data/
-│   └── assets/
-├── apis/                       🔌 Callable API specifications
-│   ├── endpoints.json
-│   └── schemas/
-├── credentials/                🔑 Encrypted, scoped credential vault
-│   └── vault.enc.json
-├── tests/                      ✅ Machine-readable acceptance criteria
-│   ├── criteria.json
-│   └── scripts/
-└── delivery/                   🦪 Completion artifacts (delivery bundles)
-    ├── result.json
-    ├── artifacts/
-    └── logs/
-```
 
 ## Quick Start
 
 ### Install
 
 ```bash
-# Clone the repo
 git clone https://github.com/ChatChatTech/nutshell.git
 cd nutshell
+make build
 
-# Use the CLI tool
-chmod +x tools/nutshell-cli.py
-alias nutshell='python3 tools/nutshell-cli.py'
+# or install globally
+go install ./cmd/nutshell/
 ```
 
-### Create a Task Bundle
+### Create a Task
 
 ```bash
-# Initialize a new bundle
+# Initialize
 nutshell init --dir my-task
 cd my-task
 
 # Edit the manifest
 vim nutshell.json
 
-# Add your context files
-echo "# Requirements\n\nBuild a user API..." > context/requirements.md
+# Check what's missing
+nutshell check
 
-# Pack it
-nutshell pack --dir . --output my-task.nut
+# Pack when ready
+nutshell pack -o my-task.nut
 ```
 
 ### Inspect a Bundle
 
-```bash
+```
 $ nutshell inspect my-task.nut
 
     🐚  n u t s h e l l  🦞
+    Task Packaging for AI Agents
 
   Bundle: my-task.nut
-  Version: 0.1.0
+  Version: 0.2.0
   Type: request
   ID: nut-7f3a1b2c-...
 
   📋 Task: Build REST API for User Management
   Priority: high | Effort: 8h
-  Reward: 50.0 energy
 
   🏷️  Tags: golang, postgresql, jwt, rest-api
   Domains: backend, authentication
+
+  👤 Publisher: Alice Chen (via claude-code)
 
   🔑 Credentials: 2 scoped
     • staging-db (postgresql) — read-write
     • api-token (bearer_token) — invoke
 
   📦 Files: 5 files, 8,200 bytes
-  Est. tokens: ~3,500
 
   ⚙️  Harness Hints:
     Agent type: execution
@@ -197,136 +183,130 @@ $ nutshell inspect my-task.nut
 ### Validate
 
 ```bash
-$ nutshell validate my-task.nut
-
-  Validating: my-task.nut
-
-  ✓ All checks passed
+nutshell validate my-task.nut      # check packed bundle
+nutshell validate ./my-task        # check directory
 ```
 
 ---
 
-## Tag System & ClawNet Integration
-
-Nutshell tags map directly to [ClawNet](https://github.com/ChatChatTech/ClawNet)'s supply-demand matching:
+## Bundle Structure
 
 ```
-Nutshell                          ClawNet
-─────────────────────────────────────────────────
-tags.skills_required    ←→    Task.Tags
-tags.domains            ←→    AgentResume.Skills
-tags.data_sources       ←→    AgentResume.DataSources
-task.reward             ←→    Task.Reward (energy credits)
-publisher.peer_id       ←→    Task.AuthorID
+task.nut                        🐚 The shell
+├── nutshell.json               📋 Manifest (always loaded first)
+├── context/                    📖 Requirements, architecture, references
+├── files/                      📦 Source files & assets
+├── apis/                       🔌 Callable API specs
+├── credentials/                🔑 Encrypted credential vault
+├── tests/                      ✅ Acceptance criteria & test scripts
+└── delivery/                   🦪 Completion artifacts (delivery bundles)
 ```
 
-When a `.nut` bundle is published on ClawNet:
-1. Tags are extracted and stored in the Task record
-2. The matching algorithm (`overlap × √(reputation/50)`) ranks agents
-3. Matched agents receive the bundle, crack it open, and bid
-4. The winning agent unpacks, executes, and returns a delivery `.nut`
+Only `nutshell.json` is required. Add directories as needed.
 
-### Custom Tags
+## Manifest (`nutshell.json`)
 
-Extend the tag system for domain-specific needs:
-
-```json
+```jsonc
 {
+  "nutshell_version": "0.2.0",
+  "bundle_type": "request",
+  "id": "nut-a1b2c3d4-...",
+  "task": {
+    "title": "Build a REST API for user management",
+    "summary": "CRUD endpoints with JWT auth and PostgreSQL.",
+    "priority": "high",
+    "estimated_effort": "8h"
+  },
   "tags": {
-    "skills_required": ["python", "pytorch"],
-    "custom": {
-      "gpu_required": true,
-      "vram_min_gb": 24,
-      "region": "us-east-1",
-      "max_cost_usd": 10.00,
-      "security_clearance": "internal"
-    }
+    "skills_required": ["golang", "postgresql", "jwt"],
+    "domains": ["backend"],
+    "custom": {"framework": "gin"}
+  },
+  "publisher": {
+    "name": "Alice Chen",
+    "tool": "claude-code"
+  },
+  "context": {
+    "requirements": "context/requirements.md",
+    "architecture": "context/architecture.md"
+  },
+  "credentials": {
+    "vault": "credentials/vault.enc.json",
+    "encryption": "age",
+    "scopes": [
+      {"name": "staging-db", "type": "postgresql", "access_level": "read-write", "expires_at": "2026-03-21T10:00:00Z"}
+    ]
+  },
+  "acceptance": {
+    "checklist": [
+      "All CRUD endpoints return correct status codes",
+      "JWT auth works for protected routes"
+    ],
+    "auto_verifiable": true
+  },
+  "harness": {
+    "agent_type_hint": "execution",
+    "context_budget_hint": 0.35,
+    "execution_strategy": "incremental",
+    "constraints": ["Do not modify files outside files/src/"]
+  },
+  "completeness": {
+    "status": "ready"
   }
 }
 ```
 
----
-
-## Two Bundle Types
-
-### 📤 Request Bundle (Task Publishing)
-
-The publisher creates this. Contains everything the agent needs:
-
-| Section | Purpose |
-|---------|---------|
-| `nutshell.json` | Compact manifest — identity, task summary, tags, reward |
-| `context/` | Detailed requirements, architecture, references |
-| `files/` | Source code, data files, assets, diagrams |
-| `apis/` | Callable API specs with base URLs and schemas |
-| `credentials/` | Encrypted, scoped, time-bounded access tokens |
-| `tests/` | Machine-readable acceptance criteria |
-| `harness` | Execution hints — agent type, strategy, constraints, context budget |
-
-### 📥 Delivery Bundle (Task Completion)
-
-The agent produces this. Contains the work product and audit trail:
-
-| Section | Purpose |
-|---------|---------|
-| `result.json` | Completion status, summary, acceptance test results |
-| `artifacts/` | Created/modified files — the actual deliverables |
-| `logs/` | Full execution log, checkpoints, decision records |
-| `tags` | Enriched tags — actual skills/tools used, real complexity |
+Only `nutshell_version`, `bundle_type`, `id`, and `task.title` are required. Everything else improves agent effectiveness.
 
 ---
 
-## Nutcracker Compression
+## The Check Command (Reverse Management)
 
-General compression (gzip, zstd) operates on bytes. **Nutcracker** operates on *context* — optimized for minimizing agent token consumption.
+The most powerful feature: **Nutshell manages the human**.
 
-### Two-Phase Approach
+```bash
+$ nutshell check
 
-**Phase 1: Structural** (lossless)
-- Archive into tar with zstd dictionary compression
-- Deduplicate identical content blocks
+  🐚 Nutshell Completeness Check
 
-**Phase 2: Context** (lossy, optional)
-- Summarize large docs while preserving key facts
-- Extract only task-relevant code sections based on tags
-- Inline small files (<500 bytes) into manifest
-- Strip comments/whitespace from code (configurable)
+  ✓ task.title: "Build REST API"
+  ✓ context/requirements.md: exists (2.1 KB)
+  ✗ context/architecture.md: referenced but missing
+  ✗ credentials: no vault — agent won't have DB access
+  ⚠ acceptance: no criteria — agent can't self-verify
+  ⚠ harness: no constraints
 
-### Token Budget
-
-```json
-{
-  "compression": {
-    "algorithm": "nutcracker",
-    "token_budget": 12000,
-    "tier1_tokens": 800,
-    "tier2_tokens": 5000,
-    "tier3_tokens": 6200,
-    "strategy": "balanced"
-  }
-}
+  Status: INCOMPLETE — fill 2 items before agent can start
 ```
 
+Instead of the agent asking "what else do I need?", the **bundle tells the human** what to provide. This inverts the typical dynamic and ensures agents receive complete context from the start.
+
 ---
 
-## Credential Security Model
+## Harness Engineering Alignment
+
+Nutshell is grounded in [Harness Engineering](docs/harness-engineering-research.md) — the emerging discipline of building infrastructure around AI agents:
+
+| Principle | Nutshell Implementation |
+|-----------|------------------------|
+| **Context Architecture** | Tiered loading — manifest first, details on demand |
+| **Agent Specialization** | `harness.agent_type_hint` guides which agent role fits |
+| **Persistent Memory** | Delivery bundles preserve execution logs, decisions, checkpoints |
+| **Structured Execution** | Request/delivery separation with machine-readable acceptance criteria |
+| **40% Rule** | `context_budget_hint` prevents context window overload |
+| **Constraint Mechanization** | Harness constraints are machine-readable and enforceable |
+
+---
+
+## Credential Security
 
 | Principle | Implementation |
 |-----------|---------------|
-| **Scoped Access** | Each credential narrowed to specific tables, endpoints, actions |
-| **Time-Bounded** | Every credential has `expires_at` — no permanent tokens |
-| **Encrypted at Rest** | Default: [age encryption](https://age-encryption.org/). Also supports SOPS, Vault |
-| **Rate-Limited** | Per-credential rate limits prevent abuse |
+| **Scoped** | Each credential narrowed to specific tables, endpoints, actions |
+| **Time-Bounded** | Every credential has `expires_at` |
+| **Encrypted** | Default: [age encryption](https://age-encryption.org/). Also supports SOPS, Vault |
+| **Rate-Limited** | Per-credential rate limits |
 | **Auditable** | Delivery bundles log which credentials were used |
-| **Revocable** | Publisher can rotate credentials without re-publishing |
-
-```bash
-# Encrypt vault for agent's public key
-age -r age1agentkey... -o vault.enc.json vault.json
-
-# Agent decrypts
-age -d -i identity.key vault.enc.json > vault.json
-```
 
 ---
 
@@ -334,59 +314,43 @@ age -d -i identity.key vault.enc.json > vault.json
 
 | Example | Description | Type |
 |---------|-------------|------|
-| [01-api-task](examples/01-api-task/) | REST API development task with credentials | Request |
-| [02-data-analysis](examples/02-data-analysis/) | Data analysis with S3 access | Request |
-| [03-delivery](examples/03-delivery/) | Completed delivery for example 01 | Delivery |
+| [01-api-task](examples/01-api-task/) | REST API development task | Request |
+| [02-data-analysis](examples/02-data-analysis/) | Data analysis with S3 | Request |
+| [03-delivery](examples/03-delivery/) | Completed delivery | Delivery |
 
 ---
 
 ## Specification
 
-The full specification lives at [spec/nutshell-spec-v0.1.0.md](spec/nutshell-spec-v0.1.0.md).
+Full spec: [spec/nutshell-spec-v0.2.0.md](spec/nutshell-spec-v0.2.0.md)
 
 Key sections:
 - §2 Bundle Structure
-- §3 Manifest Schema (`nutshell.json`)
-- §4 Delivery Bundle Schema
-- §5 Tag System
-- §6 Credential Vault
-- §7 API Specification Format
-- §8 Nutcracker Compression
-- §9 Acceptance Criteria Format
-- §10 ClawNet Integration
-- §11 MIME Type & Extension
+- §3 Manifest Schema
+- §4 Completeness Check
+- §5 Delivery Schema
+- §6 Tag System
+- §7 Credential Vault
+- §8 API Specification Format
+- §9 Acceptance Criteria
+- §10 Extensions (ClawNet, GitHub Actions, etc.)
+- §11 MIME Type
 - §12 Versioning
 
 ---
 
 ## Roadmap
 
-- [x] v0.1.0 — Specification draft
-- [x] Reference CLI (pack / unpack / inspect / validate)
+- [x] v0.2.0 — Standalone-first specification
+- [x] Go CLI (`init`, `pack`, `unpack`, `inspect`, `validate`, `check`)
 - [x] Example bundles (request + delivery)
-- [ ] Nutcracker Phase 2 compression (context-aware)
-- [ ] ClawNet native integration (gossip `.nut` hashes)
-- [ ] Credential rotation protocol
-- [ ] Multi-agent bundle splitting (parallel sub-tasks)
-- [ ] VS Code extension for bundle editing
 - [ ] JSON Schema for IDE auto-completion
+- [ ] Context-aware compression (Nutcracker Phase 2)
+- [ ] VS Code extension for bundle editing
+- [ ] Multi-agent bundle splitting (parallel sub-tasks)
+- [ ] Credential rotation protocol
+- [ ] ClawNet native integration (gossip `.nut` hashes)
 - [ ] Web viewer for `.nut` inspection
-
----
-
-## Research Foundation
-
-This project is grounded in Harness Engineering research:
-
-- [Harness Engineering Research Report](docs/harness-engineering-research.md) — Comprehensive survey of OpenAI, Anthropic, Stripe practices
-- [ClawNet Foundation](docs/clawnet-foundation.md) — How Nutshell extends ClawNet's task system
-
-Key references:
-- OpenAI — *Harness Engineering: Leveraging Codex in an Agent-First World* (2026)
-- Anthropic — *Effective Harnesses for Long-Running Agents* (2026)
-- Carlini — *Building a C Compiler with Claude* (2026)
-- Martin Fowler — *Harness Engineering* (2026)
-- Vasilopoulos et al. — *Codified Context: Three-Tier Context Infrastructure* (2026)
 
 ---
 
@@ -396,8 +360,8 @@ Nutshell is an open standard. Contributions welcome:
 
 1. **Spec improvements** — Open an issue or PR against `spec/`
 2. **Examples** — Add real-world bundle examples to `examples/`
-3. **Tooling** — Build packers/unpackers in other languages
-4. **Integration** — Connect Nutshell to your agent framework
+3. **Tooling** — Build integrations for your agent framework
+4. **Extensions** — Define new extension schemas for your platform
 
 ---
 
@@ -409,8 +373,8 @@ MIT
 
 <div align="center">
 
-*Built for [ClawNet](https://github.com/ChatChatTech/ClawNet) 🦞 — The Decentralized AI Agent Network*
+**🐚 Pack it. Crack it. Ship it.**
 
-**龍蝦吃貝殼 — Lobsters eat shellfish.**
+*An open standard by [ChatChatTech](https://github.com/ChatChatTech)*
 
 </div>

@@ -198,3 +198,84 @@ Agent 应当恰好获得当前任务所需的上下文——不多不少。
 6. Mitchell Hashimoto — "My AI Adoption Journey"
 7. Stripe — "Minions: Stripe's one-shot, end-to-end coding agents"
 8. Vasilopoulos et al. (2026) — "Codified Context: Three-Tier Context Infrastructure"
+
+---
+
+## 九、补充调研 (2026-03 更新)
+
+> 来源: Anthropic "Building Effective Agents", SWE-bench 分析, Simon Willison, LangChain
+
+### 9.1 Anthropic: Building Effective Agents
+
+Anthropic 的核心论点是 **最简脚手架原则** (minimal scaffolding):
+
+> "The most successful implementations weren't using complex frameworks or specialized libraries — they were building with simple, composable patterns."
+
+**关键模式:**
+
+| 模式 | 描述 | Nutshell 关联 |
+|------|------|---------------|
+| Augmented LLM | LLM + 检索 + 工具 + 记忆 | Nutshell 提供结构化的记忆与上下文 |
+| Prompt Chaining | 分步执行, 每步有验证门 | `acceptance` 字段 + `harness.execution_strategy` |
+| Routing | 根据输入分类到不同处理路径 | `harness.agent_type_hint` 做任务路由 |
+| Orchestrator-Workers | 中心规划, 并行执行 | 未来多 Agent bundle 拆分 |
+| Evaluator-Optimizer | 生成 → 评估 → 迭代 | delivery 验收循环 |
+
+**ACI (Agent-Computer Interface) 原则:**
+
+Anthropic 提出应像设计人类 UI 一样设计 Agent 工具接口:
+- 想想 Agent 能否轻松找到工具
+- 想想 Agent 怎么知道该用什么参数
+- 先给模型对比几种格式, 选它最容易用对的那个
+
+> **对 Nutshell 的启示**: `nutshell.json` 就是一个 ACI — Agent 读取的"界面"。字段命名、结构层级、默认值都影响 Agent 的理解效率。
+
+### 9.2 SWE-bench: 最小 Agent 脚手架
+
+Anthropic 在 SWE-bench 上取得最佳成绩的 Agent 使用了令人惊讶的简单架构:
+
+- 仅 3 个核心工具: `bash`, `text_editor`, `file_viewer`
+- **String replacement 而非 whole-file rewrite**: 减少出错率
+- 错误消息是最重要的工具设计
+- Agent 不需要复杂的 orchestration, 需要的是**精确的上下文**
+
+> **对 Nutshell 的启示**: 不需要过度设计 bundle 格式。关键是确保 Agent 能快速拿到**正确的**上下文, 而不是更多的上下文。`check` 命令的设计正是这个哲学 — 确保该有的都有, 而不是给更多。
+
+### 9.3 Simon Willison: "Context is King"
+
+Simon Willison 的 LLM 编程实践总结:
+
+**核心洞察:**
+- **"Context is king"** — 你给 Agent 看什么, 比用哪个模型重要得多
+- **分层上下文** (Tiered Context): 不要一次给所有信息, 让 Agent 按需拉取
+- **Testing 是 Agent 生成代码的唯一保障**: 让 Agent 自己写测试, 然后跑测试验证
+- **截图测试**: 让 Agent 看截图来验证 UI 输出
+
+> **对 Nutshell 的启示**: 印证了 Nutshell 的分层加载设计 — manifest 先读, context/ 按需, credentials/ 使用时。`acceptance.test_scripts` 让 Agent 可以自我验证。
+
+### 9.4 LangChain: Agentic Spectrum
+
+LangChain 定义了一个 Agent 行为谱系:
+
+```
+完全确定性 ←── 可变工具调用 ←── 可变步骤 ←── 完全自主
+   Pipeline         Agent Router       ReAct          Autonomous
+```
+
+- 大多数 "agents" 其实是 workflow (确定性流程 + LLM 节点)
+- 真正的 Agent 需要动态决定调用哪些工具、执行几步
+- 越往右越需要好的 harness
+
+> **对 Nutshell 的启示**: Nutshell 不假设 Agent 类型。`harness.agent_type_hint` 和 `execution_strategy` 让 bundle 适配这个谱系上的任意位置。一个简单 pipeline 和一个完全自主 Agent 都能消费同一个 `.nut` bundle。
+
+### 9.5 综合新发现
+
+| 发现 | 来源 | 对 Nutshell v0.2.0 的影响 |
+|------|------|--------------------------|
+| 最简脚手架优于复杂框架 | Anthropic | 保持 bundle 格式简洁, 只有 `nutshell.json` 是必需的 |
+| ACI 设计和 UI 设计一样重要 | Anthropic | 字段命名要对 Agent 友好 |
+| 精确上下文 > 更多上下文 | SWE-bench | `check` 命令确保完备但不冗余 |
+| 分层加载是共识 | Willison + Harness Eng | manifest → context → files 三层加载 |
+| Agent 行为是个谱系 | LangChain | 不假设 Agent 类型, extensions 适配不同平台 |
+| 测试是唯一保障 | Willison | `acceptance.auto_verifiable` + `test_scripts` |
+| 工具设计的错误消息至关重要 | SWE-bench | `check` 命令的输出要精确指出缺什么 |

@@ -1,5 +1,5 @@
 {
-  "nutshell_version": "0.1.0",
+  "nutshell_version": "0.2.0",
   "bundle_type": "request",
   "id": "nut-2a4b6c8d-e0f1-2345-6789-abcdef012345",
   "created_at": "2026-03-14T14:00:00Z",
@@ -9,11 +9,7 @@
     "title": "Analyze User Churn Patterns from Event Logs",
     "summary": "Process 30 days of user event logs to identify churn signals, build a cohort retention matrix, and generate a report with actionable insights. Output as a Jupyter notebook with visualizations.",
     "priority": "medium",
-    "estimated_effort": "4h",
-    "reward": {
-      "amount": 30.0,
-      "currency": "energy"
-    }
+    "estimated_effort": "4h"
   },
 
   "tags": {
@@ -28,9 +24,9 @@
   },
 
   "publisher": {
-    "peer_id": "12D3KooWAbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcdef",
-    "agent_name": "analytics-lead",
-    "reputation": 72.0
+    "name": "Analytics Lead",
+    "contact": "analytics@example.com",
+    "tool": "cursor"
   },
 
   "context": {
@@ -117,5 +113,18 @@
     "original_size_bytes": 12000,
     "compressed_size_bytes": 4200,
     "context_tokens_estimate": 2800
+  },
+
+  "completeness": {
+    "status": "ready"
+  },
+
+  "extensions": {
+    "clawnet": {
+      "peer_id": "12D3KooWAbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcdef",
+      "reward": {"amount": 30.0, "currency": "energy"},
+      "gossip_topic": "/clawnet/tasks/1.0.0",
+      "reputation": 72.0
+    }
   }
 }

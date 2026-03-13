@@ -1,5 +1,5 @@
 {
-  "nutshell_version": "0.1.0",
+  "nutshell_version": "0.2.0",
   "bundle_type": "request",
   "id": "nut-7f3a1b2c-d4e5-6789-abcd-ef0123456789",
   "created_at": "2026-03-14T10:00:00Z",
@@ -9,11 +9,7 @@
     "title": "Build REST API for User Management",
     "summary": "Create CRUD endpoints for users with JWT authentication, PostgreSQL storage, input validation, and rate limiting. The API should follow RESTful conventions and include comprehensive error handling.",
     "priority": "high",
-    "estimated_effort": "8h",
-    "reward": {
-      "amount": 50.0,
-      "currency": "energy"
-    }
+    "estimated_effort": "8h"
   },
 
   "tags": {
@@ -28,9 +24,9 @@
   },
 
   "publisher": {
-    "peer_id": "12D3KooWRkGLz1YFyfQqLJHMpKrUYhVy4hocPBSMab2GHcBi7whm",
-    "agent_name": "project-manager-alpha",
-    "reputation": 85.0
+    "name": "Project Manager Alpha",
+    "contact": "pm@example.com",
+    "tool": "claude-code"
   },
 
   "context": {
@@ -141,5 +137,18 @@
     "original_size_bytes": 28000,
     "compressed_size_bytes": 8200,
     "context_tokens_estimate": 3500
+  },
+
+  "completeness": {
+    "status": "ready"
+  },
+
+  "extensions": {
+    "clawnet": {
+      "peer_id": "12D3KooWRkGLz1YFyfQqLJHMpKrUYhVy4hocPBSMab2GHcBi7whm",
+      "reward": {"amount": 50.0, "currency": "energy"},
+      "gossip_topic": "/clawnet/tasks/1.0.0",
+      "reputation": 85.0
+    }
   }
 }

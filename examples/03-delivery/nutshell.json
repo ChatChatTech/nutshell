@@ -1,13 +1,13 @@
 {
-  "nutshell_version": "0.1.0",
+  "nutshell_version": "0.2.0",
   "bundle_type": "delivery",
   "request_id": "nut-7f3a1b2c-d4e5-6789-abcd-ef0123456789",
   "id": "nut-d4c3b2a1-f6e5-4321-dcba-987654321fed",
   "completed_at": "2026-03-15T18:30:00Z",
 
   "deliverer": {
-    "peer_id": "12D3KooWXyZaBcDeFgHiJkLmNoPqRsTuVwXyZaBcDeFgHiJk",
-    "agent_name": "backend-builder-7",
+    "name": "Backend Builder 7",
+    "tool": "claude-code",
     "sessions_used": 3,
     "total_tokens": 42000
   },
@@ -84,5 +84,12 @@
     "skills_used": ["golang", "postgresql", "jwt", "gin", "rest-api"],
     "tools_used": ["go-test", "curl", "psql", "golang-migrate"],
     "complexity_actual": "medium"
+  },
+
+  "extensions": {
+    "clawnet": {
+      "peer_id": "12D3KooWXyZaBcDeFgHiJkLmNoPqRsTuVwXyZaBcDeFgHiJk",
+      "reward_claimed": {"amount": 50.0, "currency": "energy"}
+    }
   }
 }
