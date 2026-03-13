@@ -31,9 +31,9 @@ func usage() {
 	fmt.Println("  nutshell init    [--dir <path>]                  Initialize a new bundle directory")
 	fmt.Println("  nutshell pack    [--dir <path>] [-o <file>]      Pack directory into .nut bundle")
 	fmt.Println("  nutshell unpack  <file> [-o <path>]              Unpack a .nut bundle")
-	fmt.Println("  nutshell inspect <file>                          Inspect bundle without unpacking")
-	fmt.Println("  nutshell validate <file|dir>                     Validate bundle against spec")
-	fmt.Println("  nutshell check   [--dir <path>]                  Completeness check — what's missing?")
+	fmt.Println("  nutshell inspect <file|-> [--json]               Inspect bundle without unpacking")
+	fmt.Println("  nutshell validate <file|dir> [--json]            Validate bundle against spec")
+	fmt.Println("  nutshell check   [--dir <path>] [--json]         Completeness check — what's missing?")
 	fmt.Println()
 }
 
@@ -83,9 +83,23 @@ func getFlag(args []string, flags ...string) (string, []string) {
 	return "", args
 }
 
+func hasFlag(args []string, flags ...string) (bool, []string) {
+	for i, a := range args {
+		for _, f := range flags {
+			if a == f {
+				rest := make([]string, 0, len(args)-1)
+				rest = append(rest, args[:i]...)
+				rest = append(rest, args[i+1:]...)
+				return true, rest
+			}
+		}
+	}
+	return false, args
+}
+
 func getPositional(args []string) string {
 	for _, a := range args {
-		if !strings.HasPrefix(a, "-") {
+		if a == "-" || !strings.HasPrefix(a, "-") {
 			return a
 		}
 	}
@@ -98,10 +112,9 @@ func cmdInit(args []string) {
 		dir = "."
 	}
 
+	// Only create the minimal directories — user adds more as needed
 	dirs := []string{
-		"context", "files/src", "files/data", "files/assets",
-		"apis/schemas", "credentials", "tests/scripts",
-		"delivery/artifacts", "delivery/logs",
+		"context",
 	}
 	for _, d := range dirs {
 		os.MkdirAll(filepath.Join(dir, d), 0755)
@@ -174,6 +187,11 @@ func cmdPack(args []string) {
 	fmt.Printf("  %sOriginal: %d bytes → Compressed: %d bytes (%.1f%% reduction)%s\n",
 		dim, origSize, compSize, ratio, reset)
 	fmt.Printf("  %sBundle ID: %s%s\n", dim, manifest.ID, reset)
+
+	// Show content hash for content-addressing
+	if hash, err := nutshell.HashBundle(output); err == nil {
+		fmt.Printf("  %sHash: %s%s\n", dim, hash, reset)
+	}
 }
 
 func cmdUnpack(args []string) {
@@ -202,16 +220,35 @@ func cmdUnpack(args []string) {
 }
 
 func cmdInspect(args []string) {
+	jsonMode, args := hasFlag(args, "--json")
 	file := getPositional(args)
 	if file == "" {
-		fmt.Fprintf(os.Stderr, "%s✗%s Usage: nutshell inspect <file>\n", red, reset)
+		fmt.Fprintf(os.Stderr, "%s✗%s Usage: nutshell inspect <file|->\n", red, reset)
 		os.Exit(1)
 	}
 
-	manifest, entries, err := nutshell.Inspect(file)
+	var manifest *nutshell.Manifest
+	var entries []string
+	var err error
+
+	if file == "-" {
+		manifest, entries, err = nutshell.InspectReader(os.Stdin)
+	} else {
+		manifest, entries, err = nutshell.Inspect(file)
+	}
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s✗%s %s\n", red, reset, err)
 		os.Exit(1)
+	}
+
+	if jsonMode {
+		out := map[string]interface{}{
+			"manifest": manifest,
+			"entries":  entries,
+		}
+		data, _ := json.MarshalIndent(out, "", "  ")
+		fmt.Println(string(data))
+		return
 	}
 
 	fmt.Println(shellArt)
@@ -285,6 +322,7 @@ func cmdInspect(args []string) {
 }
 
 func cmdValidate(args []string) {
+	jsonMode, args := hasFlag(args, "--json")
 	file := getPositional(args)
 	if file == "" {
 		fmt.Fprintf(os.Stderr, "%s✗%s Usage: nutshell validate <file|dir>\n", red, reset)
@@ -295,6 +333,20 @@ func cmdValidate(args []string) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s✗%s %s\n", red, reset, err)
 		os.Exit(1)
+	}
+
+	if jsonMode {
+		out := map[string]interface{}{
+			"valid":    result.IsValid(),
+			"errors":   result.Errors,
+			"warnings": result.Warnings,
+		}
+		data, _ := json.MarshalIndent(out, "", "  ")
+		fmt.Println(string(data))
+		if !result.IsValid() {
+			os.Exit(1)
+		}
+		return
 	}
 
 	fmt.Printf("\n  %sValidating:%s %s\n\n", bold, reset, file)
@@ -318,6 +370,7 @@ func cmdValidate(args []string) {
 }
 
 func cmdCheck(args []string) {
+	jsonMode, args := hasFlag(args, "--json")
 	dir, _ := getFlag(args, "--dir", "-d")
 	if dir == "" {
 		dir = getPositional(args)
@@ -330,6 +383,17 @@ func cmdCheck(args []string) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s✗%s %s\n", red, reset, err)
 		os.Exit(1)
+	}
+
+	if jsonMode {
+		out := map[string]interface{}{
+			"status":   manifest.Completeness.Status,
+			"missing":  result.Errors,
+			"warnings": result.Warnings,
+		}
+		data, _ := json.MarshalIndent(out, "", "  ")
+		fmt.Println(string(data))
+		return
 	}
 
 	fmt.Println()
@@ -349,6 +413,10 @@ func cmdCheck(args []string) {
 	// Check context files
 	checkFilePresent(dir, "context.requirements", manifest.Context.Requirements)
 	checkFilePresent(dir, "context.architecture", manifest.Context.Architecture)
+	checkFilePresent(dir, "context.references", manifest.Context.References)
+	for _, a := range manifest.Context.Additional {
+		checkFilePresent(dir, "context.additional", a)
+	}
 
 	fmt.Println()
 

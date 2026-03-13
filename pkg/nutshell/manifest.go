@@ -28,6 +28,7 @@ type Manifest struct {
 	Harness         *Harness     `json:"harness,omitempty"`
 	Resources       *Resources   `json:"resources,omitempty"`
 	Completeness    *Completeness `json:"completeness,omitempty"`
+	ParentID        string       `json:"parent_id,omitempty"`
 	Compression     *Compression `json:"compression,omitempty"`
 	Extensions      map[string]json.RawMessage `json:"extensions,omitempty"`
 }
@@ -140,6 +141,12 @@ type Completeness struct {
 	Status   string   `json:"status"` // "draft" | "incomplete" | "ready"
 	Missing  []string `json:"missing,omitempty"`
 	Warnings []string `json:"warnings,omitempty"`
+}
+
+// BundleHash holds the content-address of a packed bundle.
+type BundleHash struct {
+	Algorithm string `json:"algorithm,omitempty"` // "sha256"
+	Digest    string `json:"digest,omitempty"`
 }
 
 type Compression struct {

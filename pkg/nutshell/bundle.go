@@ -31,6 +31,9 @@ func Pack(srcDir, output string) (*Manifest, error) {
 		rel  string
 		size int64
 	}
+	// Load ignore patterns
+	ignorePatterns := LoadIgnorePatterns(srcDir)
+
 	var files []fileInfo
 	var totalSize int64
 
@@ -46,6 +49,13 @@ func Pack(srcDir, output string) (*Manifest, error) {
 			return nil
 		}
 		rel, _ := filepath.Rel(srcDir, path)
+		// Skip .nutignore itself and ignored files
+		if rel == ".nutignore" {
+			return nil
+		}
+		if IsIgnored(rel, ignorePatterns) {
+			return nil
+		}
 		info, err := d.Info()
 		if err != nil {
 			return err
@@ -221,12 +231,21 @@ func Inspect(nutPath string) (*Manifest, []string, error) {
 		return nil, nil, err
 	}
 	defer f.Close()
+	return InspectReader(f)
+}
 
-	if err := checkMagic(f); err != nil {
-		return nil, nil, err
+// InspectReader reads the manifest from a .nut stream (file or stdin).
+func InspectReader(r io.Reader) (*Manifest, []string, error) {
+	// Read and validate magic bytes
+	magic := make([]byte, 4)
+	if _, err := io.ReadFull(r, magic); err != nil {
+		return nil, nil, fmt.Errorf("reading magic bytes: %w", err)
+	}
+	if string(magic) != MagicBytes {
+		return nil, nil, fmt.Errorf("not a valid nutshell bundle (bad magic bytes)")
 	}
 
-	gr, err := gzip.NewReader(f)
+	gr, err := gzip.NewReader(r)
 	if err != nil {
 		return nil, nil, fmt.Errorf("invalid gzip: %w", err)
 	}

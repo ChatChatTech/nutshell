@@ -33,7 +33,7 @@ func Validate(manifest *Manifest) *ValidationResult {
 	if manifest.ID == "" {
 		r.Errors = append(r.Errors, "Missing required field: id")
 	}
-	if manifest.Task.Title == "" {
+	if manifest.BundleType == "request" && manifest.Task.Title == "" {
 		r.Errors = append(r.Errors, "task.title is required")
 	}
 
