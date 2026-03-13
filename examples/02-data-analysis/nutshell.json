@@ -1,0 +1,121 @@
+{
+  "nutshell_version": "0.1.0",
+  "bundle_type": "request",
+  "id": "nut-2a4b6c8d-e0f1-2345-6789-abcdef012345",
+  "created_at": "2026-03-14T14:00:00Z",
+  "expires_at": "2026-03-16T14:00:00Z",
+
+  "task": {
+    "title": "Analyze User Churn Patterns from Event Logs",
+    "summary": "Process 30 days of user event logs to identify churn signals, build a cohort retention matrix, and generate a report with actionable insights. Output as a Jupyter notebook with visualizations.",
+    "priority": "medium",
+    "estimated_effort": "4h",
+    "reward": {
+      "amount": 30.0,
+      "currency": "energy"
+    }
+  },
+
+  "tags": {
+    "skills_required": ["python", "pandas", "data-analysis", "visualization"],
+    "domains": ["analytics", "product-metrics"],
+    "data_sources": ["s3://analytics-bucket/events/"],
+    "custom": {
+      "output_format": "jupyter-notebook",
+      "data_size": "~2GB",
+      "complexity": "medium"
+    }
+  },
+
+  "publisher": {
+    "peer_id": "12D3KooWAbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcdef",
+    "agent_name": "analytics-lead",
+    "reputation": 72.0
+  },
+
+  "context": {
+    "requirements": "context/requirements.md",
+    "additional": ["context/data-dictionary.md"]
+  },
+
+  "files": {
+    "total_count": 3,
+    "total_size_bytes": 4200,
+    "tree": [
+      {"path": "files/data/sample_events.csv", "size": 2800, "role": "sample"},
+      {"path": "files/src/template.ipynb", "size": 1000, "role": "scaffold"},
+      {"path": "files/assets/retention-example.png", "size": 400, "role": "reference"}
+    ]
+  },
+
+  "apis": {
+    "endpoints_spec": "apis/endpoints.json",
+    "base_urls": {
+      "data_warehouse": "https://dw.internal.example.com"
+    },
+    "auth_method": "api_key",
+    "credential_ref": "credentials/vault.enc.json"
+  },
+
+  "credentials": {
+    "vault": "credentials/vault.enc.json",
+    "encryption": "age",
+    "scopes": [
+      {
+        "name": "s3-readonly",
+        "type": "aws_s3",
+        "access_level": "read",
+        "expires_at": "2026-03-16T14:00:00Z"
+      },
+      {
+        "name": "dw-query",
+        "type": "api_key",
+        "access_level": "read",
+        "rate_limit": "10/min",
+        "expires_at": "2026-03-16T14:00:00Z"
+      }
+    ]
+  },
+
+  "acceptance": {
+    "criteria_file": "tests/criteria.json",
+    "auto_verifiable": false,
+    "human_review_required": true,
+    "checklist": [
+      "Notebook executes end-to-end without errors",
+      "Cohort retention matrix covers 30-day window",
+      "At least 3 churn signals identified with supporting data",
+      "Visualizations are clear and properly labeled",
+      "Executive summary section with actionable recommendations"
+    ]
+  },
+
+  "harness": {
+    "agent_type_hint": "execution",
+    "context_budget_hint": 0.30,
+    "execution_strategy": "one-shot",
+    "checkpoints": false,
+    "constraints": [
+      "Use only pandas, matplotlib, seaborn — no heavy ML libraries",
+      "All data processing must handle missing values gracefully",
+      "Do not download more than 100MB of raw data for analysis"
+    ]
+  },
+
+  "resources": {
+    "docs": [
+      {"url": "https://wiki.example.com/event-schema", "title": "Event Schema Documentation"},
+      {"url": "https://wiki.example.com/churn-definition", "title": "Official Churn Definition"}
+    ],
+    "images": [
+      {"path": "files/assets/retention-example.png", "description": "Example retention matrix format"}
+    ]
+  },
+
+  "compression": {
+    "algorithm": "zstd",
+    "original_size_bytes": 12000,
+    "compressed_size_bytes": 4200,
+    "context_tokens_estimate": 2800
+  }
+}

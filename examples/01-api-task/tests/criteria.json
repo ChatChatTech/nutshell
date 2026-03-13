@@ -1,0 +1,69 @@
+{
+  "criteria_version": "0.1.0",
+  "test_framework": "shell",
+  "auto_verifiable": true,
+  "criteria": [
+    {
+      "id": "AC-001",
+      "description": "POST /api/v1/users creates a user and returns 201",
+      "type": "api_test",
+      "script": "tests/scripts/test_api.sh",
+      "expected": {"status_code": 201, "body_contains": "id"}
+    },
+    {
+      "id": "AC-002",
+      "description": "GET /api/v1/users returns paginated user list",
+      "type": "api_test",
+      "expected": {"status_code": 200, "body_contains": "users"}
+    },
+    {
+      "id": "AC-003",
+      "description": "GET /api/v1/users/:id returns single user",
+      "type": "api_test",
+      "expected": {"status_code": 200, "body_contains": "email"}
+    },
+    {
+      "id": "AC-004",
+      "description": "PUT /api/v1/users/:id updates user fields",
+      "type": "api_test",
+      "expected": {"status_code": 200}
+    },
+    {
+      "id": "AC-005",
+      "description": "DELETE /api/v1/users/:id soft-deletes user",
+      "type": "api_test",
+      "expected": {"status_code": 204}
+    },
+    {
+      "id": "AC-006",
+      "description": "Unauthenticated request to protected route returns 401",
+      "type": "api_test",
+      "expected": {"status_code": 401, "body_contains": "error"}
+    },
+    {
+      "id": "AC-007",
+      "description": "POST /api/v1/auth/login returns JWT tokens",
+      "type": "api_test",
+      "expected": {"status_code": 200, "body_contains": "access_token"}
+    },
+    {
+      "id": "AC-008",
+      "description": "Rate limit returns 429 after exceeding threshold",
+      "type": "api_test",
+      "expected": {"status_code": 429, "header_contains": "Retry-After"}
+    },
+    {
+      "id": "AC-009",
+      "description": "Invalid email format is rejected with 400",
+      "type": "api_test",
+      "expected": {"status_code": 400, "body_contains": "email"}
+    },
+    {
+      "id": "AC-010",
+      "description": "Database migration creates users table",
+      "type": "sql_check",
+      "query": "SELECT count(*) FROM information_schema.tables WHERE table_name = 'users'",
+      "expected": {"result": 1}
+    }
+  ]
+}

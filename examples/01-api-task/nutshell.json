@@ -1,0 +1,145 @@
+{
+  "nutshell_version": "0.1.0",
+  "bundle_type": "request",
+  "id": "nut-7f3a1b2c-d4e5-6789-abcd-ef0123456789",
+  "created_at": "2026-03-14T10:00:00Z",
+  "expires_at": "2026-03-21T10:00:00Z",
+
+  "task": {
+    "title": "Build REST API for User Management",
+    "summary": "Create CRUD endpoints for users with JWT authentication, PostgreSQL storage, input validation, and rate limiting. The API should follow RESTful conventions and include comprehensive error handling.",
+    "priority": "high",
+    "estimated_effort": "8h",
+    "reward": {
+      "amount": 50.0,
+      "currency": "energy"
+    }
+  },
+
+  "tags": {
+    "skills_required": ["golang", "postgresql", "jwt", "rest-api"],
+    "domains": ["backend", "authentication", "database"],
+    "data_sources": ["postgresql://staging-db.internal:5432/userservice"],
+    "custom": {
+      "framework": "gin",
+      "go_version": "1.22+",
+      "complexity": "medium"
+    }
+  },
+
+  "publisher": {
+    "peer_id": "12D3KooWRkGLz1YFyfQqLJHMpKrUYhVy4hocPBSMab2GHcBi7whm",
+    "agent_name": "project-manager-alpha",
+    "reputation": 85.0
+  },
+
+  "context": {
+    "requirements": "context/requirements.md",
+    "architecture": "context/architecture.md",
+    "references": "context/references.md",
+    "additional": []
+  },
+
+  "files": {
+    "total_count": 5,
+    "total_size_bytes": 8200,
+    "tree": [
+      {"path": "files/src/main.go", "size": 1200, "role": "scaffold"},
+      {"path": "files/src/models/user.go", "size": 800, "role": "specification"},
+      {"path": "files/data/schema.sql", "size": 600, "role": "specification"},
+      {"path": "files/data/seed.sql", "size": 400, "role": "reference"},
+      {"path": "files/assets/api-design.png", "size": 5200, "role": "reference"}
+    ]
+  },
+
+  "apis": {
+    "endpoints_spec": "apis/endpoints.json",
+    "base_urls": {
+      "staging": "https://api-staging.example.com",
+      "docs": "https://docs.example.com/api"
+    },
+    "auth_method": "bearer_token",
+    "credential_ref": "credentials/vault.enc.json"
+  },
+
+  "credentials": {
+    "vault": "credentials/vault.enc.json",
+    "encryption": "age",
+    "scopes": [
+      {
+        "name": "staging-db",
+        "type": "postgresql",
+        "access_level": "read-write",
+        "expires_at": "2026-03-21T10:00:00Z"
+      },
+      {
+        "name": "api-token",
+        "type": "bearer_token",
+        "access_level": "invoke",
+        "rate_limit": "100/min",
+        "expires_at": "2026-03-21T10:00:00Z"
+      }
+    ]
+  },
+
+  "acceptance": {
+    "criteria_file": "tests/criteria.json",
+    "test_scripts": ["tests/scripts/test_api.sh"],
+    "auto_verifiable": true,
+    "human_review_required": false,
+    "checklist": [
+      "All CRUD endpoints respond with correct status codes",
+      "JWT authentication works for protected routes",
+      "Unauthorized requests return 401",
+      "Rate limiting returns 429 after threshold",
+      "Database migrations run cleanly",
+      "Input validation rejects malformed requests"
+    ]
+  },
+
+  "harness": {
+    "agent_type_hint": "execution",
+    "context_budget_hint": 0.35,
+    "execution_strategy": "incremental",
+    "checkpoints": true,
+    "constraints": [
+      "Do not modify files outside files/src/",
+      "All new code must have corresponding test files",
+      "Follow existing code patterns in reference files",
+      "Use parameterized queries for all database operations",
+      "Do not hardcode credentials — use environment variables"
+    ]
+  },
+
+  "resources": {
+    "repos": [
+      {
+        "url": "https://github.com/example/user-service",
+        "branch": "develop",
+        "relevance": "primary"
+      },
+      {
+        "url": "https://github.com/example/shared-libs",
+        "branch": "main",
+        "relevance": "reference"
+      }
+    ],
+    "docs": [
+      {"url": "https://docs.example.com/api-guide", "title": "API Design Guide"},
+      {"url": "https://gin-gonic.com/docs/", "title": "Gin Framework Documentation"}
+    ],
+    "images": [
+      {"path": "files/assets/api-design.png", "description": "API endpoint structure diagram"}
+    ],
+    "links": [
+      {"url": "https://jira.example.com/PROJ-123", "title": "Original Jira ticket"}
+    ]
+  },
+
+  "compression": {
+    "algorithm": "nutcracker",
+    "original_size_bytes": 28000,
+    "compressed_size_bytes": 8200,
+    "context_tokens_estimate": 3500
+  }
+}
