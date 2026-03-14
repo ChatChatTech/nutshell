@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -64,6 +65,11 @@ func main() {
 	cmd := os.Args[1]
 	args := os.Args[2:]
 
+	// Per-subcommand --help / -h
+	if h, ok := subHelpText[cmd]; ok {
+		subHelp(args, cmd, h)
+	}
+
 	switch cmd {
 	case "init":
 		cmdInit(args)
@@ -106,6 +112,164 @@ func main() {
 		usage()
 		os.Exit(1)
 	}
+}
+
+// subHelp prints per-subcommand help and exits if --help/-h is present.
+func subHelp(args []string, name, text string) []string {
+	for _, a := range args {
+		if a == "--help" || a == "-h" {
+			fmt.Printf("Usage: nutshell %s\n\n%s\n", name, text)
+			os.Exit(0)
+		}
+	}
+	return args
+}
+
+var subHelpText = map[string]string{
+	"init": `init [--dir <path>]
+
+  Initialize a new bundle directory with nutshell.json and context/.
+
+  Flags:
+    --dir, -d <path>   Target directory (default: .)`,
+
+	"pack": `pack [--dir <path>] [-o <file>]
+
+  Pack a directory into a .nut bundle.
+
+  Flags:
+    --dir, -d <path>   Source directory (default: .)
+    -o <file>          Output filename (default: <slug>.nut)`,
+
+	"unpack": `unpack <file> [-o <path>]
+
+  Unpack a .nut bundle into a directory.
+
+  Flags:
+    -o <path>   Output directory (default: derived from bundle name)`,
+
+	"inspect": `inspect <file|-> [--json]
+
+  Inspect a .nut bundle without unpacking. Use '-' for stdin.
+
+  Flags:
+    --json   Output as JSON`,
+
+	"validate": `validate <file|dir> [--json]
+
+  Validate a bundle against the nutshell spec.
+
+  Flags:
+    --json   Output as JSON`,
+
+	"check": `check [--dir <path>] [--json]
+
+  Completeness check — shows what's missing from the manifest.
+
+  Flags:
+    --dir, -d <path>   Target directory (default: .)
+    --json             Output as JSON`,
+
+	"set": `set <key> <value> [--dir <path>]
+
+  Quick-edit a manifest field via dot-path notation.
+
+  Flags:
+    --dir, -d <path>   Target directory (default: .)
+
+  Supported paths:
+    task.title, task.summary, task.priority, task.estimated_effort
+    publisher.name, publisher.contact, publisher.tool
+    context.requirements, context.architecture, context.references
+    harness.agent_type_hint, harness.execution_strategy,
+    harness.context_budget_hint, harness.checkpoints
+    tags.skills_required, tags.domains  (comma-separated)
+    bundle_type, parent_id, expires_at
+    extensions.<name>.<path>  (arbitrary nested JSON, auto-creates)
+
+  Examples:
+    nutshell set task.title "Build REST API"
+    nutshell set extensions.clawnet.reward.amount 1.5`,
+
+	"diff": `diff <bundle-a> <bundle-b> [--json]
+
+  Compare two bundles side-by-side.
+
+  Flags:
+    --json   Output as JSON`,
+
+	"schema": `schema [-o <file>]
+
+  Output the JSON Schema for nutshell.json.
+
+  Flags:
+    -o <file>   Write to file instead of stdout`,
+
+	"compress": `compress [--dir <path>] [-o <file>] [--level fast|best]
+
+  Context-aware compression of a bundle.
+
+  Flags:
+    --dir, -d <path>   Source directory (default: .)
+    -o <file>          Output filename
+    --level <level>    Compression level: fast or best (default: best)`,
+
+	"split": `split [--dir <path>] [-n <count>]
+
+  Split a task into parallel sub-tasks.
+
+  Flags:
+    --dir, -d <path>   Source directory (default: .)
+    -n <count>         Number of sub-tasks`,
+
+	"merge": `merge <dir1> <dir2> ... [-o <dir>]
+
+  Merge delivery sub-bundles into one.
+
+  Flags:
+    -o <dir>   Output directory`,
+
+	"rotate": `rotate <scope> [--expires <date>] [--dir <path>]
+
+  Rotate credential expiry within a bundle.
+
+  Flags:
+    --dir, -d <path>       Target directory (default: .)
+    --expires <date>       New expiration date`,
+
+	"serve": `serve [<file|dir>] [--port <port>]
+
+  Web viewer for .nut bundle inspection.
+
+  Flags:
+    --port, -p <port>   Port to listen on (default: 3000)`,
+
+	"publish": `publish [--dir <path>] [--reward <amount>] [--clawnet <addr>]
+
+  Pack & publish a task to the ClawNet network.
+  Reads reward from extensions.clawnet.reward.amount in the manifest
+  if present; otherwise uses --reward flag or daemon default (1.0 energy).
+
+  Flags:
+    --dir, -d <path>       Source directory (default: .)
+    --reward <amount>      Reward in energy (default: 1.0)
+    --clawnet <addr>       ClawNet daemon address (default: http://localhost:3998)`,
+
+	"claim": `claim <task-id> [--clawnet <addr>] [-o <dir>]
+
+  Claim a task from ClawNet and create a local working directory.
+
+  Flags:
+    -o <dir>               Output directory (default: derived from title)
+    --clawnet <addr>       ClawNet daemon address (default: http://localhost:3998)`,
+
+	"deliver": `deliver [--dir <path>] [--clawnet <addr>]
+
+  Pack a delivery bundle and submit it to a ClawNet task.
+
+  Flags:
+    --dir, -d <path>       Source directory (default: .)
+    --clawnet <addr>       ClawNet daemon address (default: http://localhost:3998)`,
 }
 
 func getFlag(args []string, flags ...string) (string, []string) {
@@ -863,6 +1027,7 @@ func cmdPublish(args []string) {
 	if dir == "" {
 		dir = "."
 	}
+	rewardStr, args := getFlag(args, "--reward")
 
 	// Step 1: Check if ClawNet binary is installed
 	if _, err := exec.LookPath("clawnet"); err != nil {
@@ -881,25 +1046,7 @@ func cmdPublish(args []string) {
 		os.Exit(1)
 	}
 
-	// Step 3: Check credit balance
-	credits, err := client.GetCreditBalance()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s⚠%s Could not check credit balance: %s\n", yellow, reset, err)
-		// Non-fatal: proceed and let the daemon reject if insufficient
-	} else {
-		available := credits.Balance
-		if credits.Energy > 0 {
-			available = credits.Energy
-		}
-		fmt.Printf("%s▸%s ClawNet connected — %s (%s)%s\n", cyan, reset, status.AgentName, status.PeerID[:16]+"...", reset)
-		fmt.Printf("  %sCredits: %.1f available, %.1f frozen%s\n", dim, available, credits.Frozen, reset)
-		if available < 10.0 {
-			fmt.Fprintf(os.Stderr, "%s⚠%s Low credit balance (%.1f). Default task reward is 10.0 energy.\n", yellow, reset, available)
-			fmt.Fprintf(os.Stderr, "  %sPublishing may fail if credits are insufficient.%s\n", dim, reset)
-		}
-	}
-
-	// Read manifest
+	// Read manifest first to check for reward in extensions
 	data, err := os.ReadFile(filepath.Join(dir, "nutshell.json"))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s✗%s No nutshell.json in %s\n", red, reset, dir)
@@ -909,6 +1056,46 @@ func cmdPublish(args []string) {
 	if err := json.Unmarshal(data, &manifest); err != nil {
 		fmt.Fprintf(os.Stderr, "%s✗%s Invalid nutshell.json: %s\n", red, reset, err)
 		os.Exit(1)
+	}
+
+	// Determine reward: --reward flag > extensions.clawnet.reward.amount > daemon default (1.0)
+	var reward float64
+	if rewardStr != "" {
+		reward, err = strconv.ParseFloat(rewardStr, 64)
+		if err != nil || reward <= 0 {
+			fmt.Fprintf(os.Stderr, "%s✗%s Invalid --reward value: %s\n", red, reset, rewardStr)
+			os.Exit(1)
+		}
+	} else if ext, ok := manifest.Extensions["clawnet"]; ok {
+		var clawExt map[string]interface{}
+		json.Unmarshal(ext, &clawExt)
+		if rw, ok := clawExt["reward"].(map[string]interface{}); ok {
+			if amt, ok := rw["amount"].(float64); ok && amt > 0 {
+				reward = amt
+			}
+		}
+	}
+	// reward == 0 means use daemon default (1.0)
+
+	// Step 3: Check credit balance
+	credits, cerr := client.GetCreditBalance()
+	if cerr != nil {
+		fmt.Fprintf(os.Stderr, "%s⚠%s Could not check credit balance: %s\n", yellow, reset, cerr)
+	} else {
+		available := credits.Balance
+		if credits.Energy > 0 {
+			available = credits.Energy
+		}
+		fmt.Printf("%s▸%s ClawNet connected — %s (%s)%s\n", cyan, reset, status.AgentName, status.PeerID[:16]+"...", reset)
+		fmt.Printf("  %sCredits: %.1f available, %.1f frozen%s\n", dim, available, credits.Frozen, reset)
+		effectiveReward := reward
+		if effectiveReward == 0 {
+			effectiveReward = 1.0
+		}
+		if available < effectiveReward {
+			fmt.Fprintf(os.Stderr, "%s⚠%s Low credit balance (%.1f). Task reward is %.1f energy.\n", yellow, reset, available, effectiveReward)
+			fmt.Fprintf(os.Stderr, "  %sPublishing may fail if credits are insufficient.%s\n", dim, reset)
+		}
 	}
 
 	if manifest.Task.Title == "" {
@@ -933,12 +1120,16 @@ func cmdPublish(args []string) {
 	nutHash, _ := nutshell.HashBundle(nutFile)
 
 	// Publish task to ClawNet
-	task, err := client.PublishTask(&manifest, nutHash)
+	task, err := client.PublishTask(&manifest, nutHash, reward)
 	if err != nil {
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "insufficient") || strings.Contains(errMsg, "credits") {
 			fmt.Fprintf(os.Stderr, "%s✗%s Insufficient credits to publish this task\n", red, reset)
-			fmt.Fprintf(os.Stderr, "  %sDefault task reward is 10.0 energy. Check balance: curl http://localhost:3998/api/credits/balance%s\n", dim, reset)
+			effectiveReward := reward
+			if effectiveReward == 0 {
+				effectiveReward = 1.0
+			}
+			fmt.Fprintf(os.Stderr, "  %sTask reward is %.1f energy. Check balance: curl http://localhost:3998/api/credits/balance%s\n", dim, effectiveReward, reset)
 		} else {
 			fmt.Fprintf(os.Stderr, "%s✗%s %s\n", red, reset, err)
 		}

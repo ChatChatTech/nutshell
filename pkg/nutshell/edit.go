@@ -107,9 +107,82 @@ func setField(m *Manifest, key, value string) error {
 		m.Tags.Domains = splitCSV(value)
 
 	default:
+		// extensions.<name>.<path...> — arbitrary nested JSON
+		if strings.HasPrefix(key, "extensions.") {
+			return setExtension(m, key, value)
+		}
 		return fmt.Errorf("unknown field: %s", key)
 	}
 	return nil
+}
+
+// setExtension handles extensions.<name>.<nested.path> = value.
+// It auto-creates the extension map and nested objects, and auto-detects
+// numeric vs boolean vs string values.
+func setExtension(m *Manifest, key, value string) error {
+	parts := strings.SplitN(key, ".", 3) // ["extensions", "<name>", "<rest>"]
+	if len(parts) < 3 {
+		return fmt.Errorf("extensions path must be extensions.<name>.<field>: %s", key)
+	}
+	extName := parts[1]
+	fieldPath := strings.Split(parts[2], ".")
+
+	if m.Extensions == nil {
+		m.Extensions = make(map[string]json.RawMessage)
+	}
+
+	// Decode existing extension or start empty
+	var ext map[string]interface{}
+	if raw, ok := m.Extensions[extName]; ok {
+		if err := json.Unmarshal(raw, &ext); err != nil {
+			ext = make(map[string]interface{})
+		}
+	} else {
+		ext = make(map[string]interface{})
+	}
+
+	// Walk/create the nested path
+	cur := ext
+	for i, p := range fieldPath {
+		if i == len(fieldPath)-1 {
+			// Leaf — set the value with type detection
+			cur[p] = detectValue(value)
+		} else {
+			next, ok := cur[p]
+			if !ok {
+				child := make(map[string]interface{})
+				cur[p] = child
+				cur = child
+			} else if child, ok := next.(map[string]interface{}); ok {
+				cur = child
+			} else {
+				child := make(map[string]interface{})
+				cur[p] = child
+				cur = child
+			}
+		}
+	}
+
+	data, err := json.Marshal(ext)
+	if err != nil {
+		return err
+	}
+	m.Extensions[extName] = json.RawMessage(data)
+	return nil
+}
+
+// detectValue converts a string to float64, bool, or keeps it as string.
+func detectValue(s string) interface{} {
+	if f, err := strconv.ParseFloat(s, 64); err == nil {
+		return f
+	}
+	if s == "true" {
+		return true
+	}
+	if s == "false" {
+		return false
+	}
+	return s
 }
 
 func splitCSV(s string) []string {

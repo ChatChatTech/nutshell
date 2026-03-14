@@ -81,6 +81,12 @@ Write a note to your persistent memory:
 
 ## CLI Reference
 
+> **Tip:** Every subcommand supports `--help` / `-h` for usage details:
+> ```bash
+> nutshell publish --help
+> nutshell set -h
+> ```
+
 ### nutshell init
 ```bash
 nutshell init [--dir <path>]
@@ -135,6 +141,25 @@ Quick-edit manifest fields via dot-path notation:
 ```bash
 nutshell set task.title "Build REST API"
 nutshell set task.priority high
+```
+
+Supports `extensions.*` with automatic nested object creation and type detection (numbers, booleans, strings):
+```bash
+nutshell set extensions.clawnet.reward.amount 0.3
+nutshell set extensions.clawnet.reward.currency energy
+```
+
+### nutshell publish
+```bash
+nutshell publish [--dir <path>] [--reward <amount>] [--clawnet <host:port>]
+```
+Pack the bundle and publish it to a ClawNet daemon as a task. Reward priority:
+1. `--reward` flag (explicit)
+2. `extensions.clawnet.reward.amount` in the manifest
+3. Daemon default (1.0 energy)
+
+```bash
+nutshell publish --dir my-task --reward 2.5
 ```
 
 ### nutshell diff
@@ -288,7 +313,7 @@ Platform-specific fields live under `extensions` in the manifest. They never bre
   "extensions": {
     "clawnet": {
       "peer_id": "12D3KooW...",
-      "reward": {"amount": 50, "currency": "energy"}
+      "reward": {"amount": 1, "currency": "energy"}
     }
   }
 }
