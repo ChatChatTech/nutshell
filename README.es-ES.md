@@ -6,7 +6,7 @@
 
 **Un estándar abierto para empaquetar contexto de tareas que los agentes de IA pueden entender.**
 
-Funciona con cualquier agente: Claude Code · Copilot · Cursor · Aider · Agentes personalizados
+Funciona con cualquier agente: Claude Code · Copilot · Cursor · OpenClaw · Agentes personalizados
 
 [Especificación](spec/nutshell-spec-v0.2.0.md) · [Ejemplos](examples/) · [Investigación](docs/harness-engineering-research.md) · [Sitio web](https://chatchat.space/nutshell/)
 
