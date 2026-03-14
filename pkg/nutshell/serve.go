@@ -106,11 +106,11 @@ func ServeViewer(target string, port int) (string, *http.Server, error) {
 		fmt.Fprint(w, viewerHTML(manifest, entries, isBundle))
 	})
 
-	addr := fmt.Sprintf("127.0.0.1:%d", port)
+	addr := fmt.Sprintf("0.0.0.0:%d", port)
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		// Try any available port
-		ln, err = net.Listen("tcp", "127.0.0.1:0")
+		ln, err = net.Listen("tcp", "0.0.0.0:0")
 		if err != nil {
 			return "", nil, err
 		}
@@ -121,6 +121,13 @@ func ServeViewer(target string, port int) (string, *http.Server, error) {
 	go server.Serve(ln)
 
 	return actualAddr, server, nil
+}
+
+func cleanTag(s string) string {
+	s = strings.TrimSpace(s)
+	s = strings.Trim(s, "[]\"")
+	s = strings.TrimSpace(s)
+	return s
 }
 
 func viewerHTML(m *Manifest, entries []string, isBundle bool) string {
@@ -155,6 +162,7 @@ func viewerHTML(m *Manifest, entries []string, isBundle bool) string {
   .status-valid { color: #3fb950; }
   .status-warn { color: #d29922; }
   .status-error { color: #f85149; }
+  .status-draft { color: #8b949e; }
   .file-list { max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.85rem; }
   .file-list div { padding: 3px 0; border-bottom: 1px solid #21262d; cursor: pointer; }
   .file-list div:hover { color: #58a6ff; }
@@ -162,13 +170,28 @@ func viewerHTML(m *Manifest, entries []string, isBundle bool) string {
   #file-content { display: none; margin-top: 1.5rem; }
   #file-content h3 { color: #58a6ff; margin-bottom: 0.5rem; font-family: monospace; }
   .emoji { font-size: 1.2rem; margin-right: 0.3rem; }
+  .checklist { list-style: none; padding: 0; }
+  .checklist li { padding: 4px 0; border-bottom: 1px solid #21262d; font-size: 0.9rem; }
+  .checklist li::before { content: "☐ "; color: #58a6ff; }
+  .constraint { padding: 4px 0; border-bottom: 1px solid #21262d; font-size: 0.9rem; color: #d29922; }
+  .constraint::before { content: "⚠ "; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
+  .badge-draft { background: #8b949e33; color: #8b949e; }
+  .badge-ready { background: #3fb95033; color: #3fb950; }
+  .badge-incomplete { background: #d2992233; color: #d29922; }
 </style>
 </head>
 <body>
 <div class="header">
   <div class="container">
     <h1>🐚 Nutshell Viewer</h1>
-    <div class="meta">` + escapeHTML(m.Task.Title) + ` • ` + m.BundleType + ` • ` + mode + ` mode</div>
+    <div class="meta">` + escapeHTML(m.Task.Title) + ` • ` + m.BundleType + ` • ` + mode + ` mode` +
+		func() string {
+			if m.Completeness != nil && m.Completeness.Status != "" {
+				return ` • <span class="badge badge-` + m.Completeness.Status + `">` + m.Completeness.Status + `</span>`
+			}
+			return ""
+		}() + `</div>
   </div>
 </div>
 <div class="container">
@@ -198,12 +221,18 @@ func viewerHTML(m *Manifest, entries []string, isBundle bool) string {
 		func() string {
 			var s string
 			for _, t := range m.Tags.SkillsRequired {
-				s += `<span class="tag">` + escapeHTML(t) + `</span>`
+				cleaned := cleanTag(t)
+				if cleaned != "" {
+					s += `<span class="tag">` + escapeHTML(cleaned) + `</span>`
+				}
 			}
 			if len(m.Tags.Domains) > 0 {
 				s += `<div style="margin-top:0.5rem"><div class="label">Domains</div>`
 				for _, d := range m.Tags.Domains {
-					s += `<span class="tag">` + escapeHTML(d) + `</span>`
+					cleaned := cleanTag(d)
+					if cleaned != "" {
+						s += `<span class="tag">` + escapeHTML(cleaned) + `</span>`
+					}
 				}
 				s += `</div>`
 			}
@@ -218,6 +247,77 @@ func viewerHTML(m *Manifest, entries []string, isBundle bool) string {
       <div class="file-list" id="file-list"></div>
     </div>
   </div>` +
+		// Acceptance checklist
+		func() string {
+			if m.Acceptance != nil && len(m.Acceptance.Checklist) > 0 {
+				s := `
+  <div class="card" style="margin-top:1.5rem">
+    <h2><span class="emoji">✅</span>Acceptance Checklist</h2>
+    <ul class="checklist">`
+				for _, item := range m.Acceptance.Checklist {
+					s += `
+      <li>` + escapeHTML(item) + `</li>`
+				}
+				s += `
+    </ul>
+  </div>`
+				return s
+			}
+			return ""
+		}() +
+		// Harness constraints
+		func() string {
+			if m.Harness != nil {
+				s := `
+  <div class="card" style="margin-top:1.5rem">
+    <h2><span class="emoji">⚙️</span>Agent Harness</h2>`
+				if m.Harness.AgentTypeHint != "" {
+					s += `
+    <div class="field"><div class="label">Agent Type</div><div class="value">` + escapeHTML(m.Harness.AgentTypeHint) + `</div></div>`
+				}
+				if m.Harness.ExecutionStrategy != "" {
+					s += `
+    <div class="field"><div class="label">Strategy</div><div class="value">` + escapeHTML(m.Harness.ExecutionStrategy) + `</div></div>`
+				}
+				if m.Harness.ContextBudgetHint > 0 {
+					s += `
+    <div class="field"><div class="label">Context Budget</div><div class="value">` + fmt.Sprintf("%.0f%%", m.Harness.ContextBudgetHint*100) + `</div></div>`
+				}
+				if len(m.Harness.Constraints) > 0 {
+					s += `
+    <div style="margin-top:0.5rem"><div class="label" style="margin-bottom:0.3rem">Constraints</div>`
+					for _, c := range m.Harness.Constraints {
+						s += `
+    <div class="constraint">` + escapeHTML(c) + `</div>`
+					}
+					s += `</div>`
+				}
+				s += `
+  </div>`
+				return s
+			}
+			return ""
+		}() +
+		// Extensions (e.g. clawnet)
+		func() string {
+			if len(m.Extensions) > 0 {
+				s := `
+  <div class="card" style="margin-top:1.5rem">
+    <h2><span class="emoji">🔌</span>Extensions</h2>`
+				for name, raw := range m.Extensions {
+					var pretty interface{}
+					json.Unmarshal(raw, &pretty)
+					prettyJSON, _ := json.MarshalIndent(pretty, "    ", "  ")
+					s += `
+    <div class="field"><div class="label">` + escapeHTML(name) + `</div></div>
+    <pre>` + escapeHTML(string(prettyJSON)) + `</pre>`
+				}
+				s += `
+  </div>`
+				return s
+			}
+			return ""
+		}() +
 		func() string {
 			if !isBundle {
 				return `

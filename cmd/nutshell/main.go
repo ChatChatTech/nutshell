@@ -834,10 +834,13 @@ func cmdServe(args []string) {
 		os.Exit(1)
 	}
 
+	// Normalize [::] to 0.0.0.0 for display
+	displayAddr := strings.Replace(addr, "[::]", "0.0.0.0", 1)
+
 	fmt.Print(shellArt)
 	fmt.Printf("  %s🌐 Web Viewer%s\n", bold, reset)
 	fmt.Printf("  %sServing:%s %s\n", dim, reset, target)
-	fmt.Printf("  %sOpen:%s http://%s\n\n", dim, reset, addr)
+	fmt.Printf("  %sOpen:%s http://%s\n\n", dim, reset, displayAddr)
 	fmt.Printf("  Press Ctrl+C to stop.\n")
 
 	// Block until interrupt
