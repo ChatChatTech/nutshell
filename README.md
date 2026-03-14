@@ -6,7 +6,7 @@
 
 **An open standard for packaging task context that AI agents can understand.**
 
-Works with any agent: Claude Code · Copilot · Cursor · Aider · Custom agents
+Works with any agent: Claude Code · Copilot · Cursor · OpenClaw · Custom agents
 
 [Specification](spec/nutshell-spec-v0.2.0.md) · [Examples](examples/) · [Research](docs/harness-engineering-research.md) · [Website](https://chatchat.space/nutshell/)
 
