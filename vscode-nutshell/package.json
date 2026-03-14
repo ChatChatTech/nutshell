@@ -1,0 +1,138 @@
+{
+  "name": "vscode-nutshell",
+  "displayName": "Nutshell — AI Task Bundle Editor",
+  "description": "Edit, validate, and inspect .nut bundles for AI agent task packaging",
+  "version": "0.1.0",
+  "publisher": "ChatChatTech",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ChatChatTech/nutshell"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters",
+    "Snippets",
+    "Other"
+  ],
+  "keywords": [
+    "nutshell",
+    "ai",
+    "agent",
+    "task",
+    "bundle"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/nutshell.json",
+    "onLanguage:json"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "nutshell.init",
+        "title": "Nutshell: Init — Create a new bundle scaffold"
+      },
+      {
+        "command": "nutshell.pack",
+        "title": "Nutshell: Pack — Create .nut bundle from directory"
+      },
+      {
+        "command": "nutshell.unpack",
+        "title": "Nutshell: Unpack — Extract .nut bundle"
+      },
+      {
+        "command": "nutshell.inspect",
+        "title": "Nutshell: Inspect — View bundle manifest"
+      },
+      {
+        "command": "nutshell.validate",
+        "title": "Nutshell: Validate — Check bundle against spec"
+      },
+      {
+        "command": "nutshell.check",
+        "title": "Nutshell: Check Completeness"
+      },
+      {
+        "command": "nutshell.serve",
+        "title": "Nutshell: Open Web Viewer"
+      }
+    ],
+    "jsonValidation": [
+      {
+        "fileMatch": "nutshell.json",
+        "url": "./schema/nutshell.schema.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "json",
+        "path": "./snippets/nutshell.json"
+      }
+    ],
+    "languages": [
+      {
+        "id": "nutshell-bundle",
+        "aliases": ["Nutshell Bundle"],
+        "extensions": [".nut"],
+        "icon": {
+          "light": "./icons/nut-light.svg",
+          "dark": "./icons/nut-dark.svg"
+        }
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "when": "resourceFilename == nutshell.json",
+          "command": "nutshell.validate",
+          "group": "nutshell@1"
+        },
+        {
+          "when": "resourceFilename == nutshell.json",
+          "command": "nutshell.pack",
+          "group": "nutshell@2"
+        },
+        {
+          "when": "resourceExtname == .nut",
+          "command": "nutshell.inspect",
+          "group": "nutshell@1"
+        },
+        {
+          "when": "resourceExtname == .nut",
+          "command": "nutshell.unpack",
+          "group": "nutshell@2"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Nutshell",
+      "properties": {
+        "nutshell.cliPath": {
+          "type": "string",
+          "default": "nutshell",
+          "description": "Path to the nutshell CLI binary"
+        },
+        "nutshell.autoValidate": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically validate nutshell.json on save"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  }
+}

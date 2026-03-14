@@ -3,6 +3,7 @@ package nutshell
 import (
 	"archive/tar"
 	"compress/gzip"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -71,6 +72,18 @@ func Pack(srcDir, output string) (*Manifest, error) {
 	// Update manifest
 	manifest.Files.TotalCount = len(files)
 	manifest.Files.TotalSizeBytes = totalSize
+	manifest.Files.Tree = nil
+	for _, f := range files {
+		hash, err := hashFile(f.path)
+		if err != nil {
+			return nil, fmt.Errorf("hashing %s: %w", f.rel, err)
+		}
+		manifest.Files.Tree = append(manifest.Files.Tree, FileEntry{
+			Path: f.rel,
+			Size: f.size,
+			Hash: hash,
+		})
+	}
 	if manifest.Compression == nil {
 		manifest.Compression = &Compression{}
 	}
@@ -283,6 +296,19 @@ func InspectReader(r io.Reader) (*Manifest, []string, error) {
 		return nil, nil, fmt.Errorf("no nutshell.json in bundle")
 	}
 	return manifest, entries, nil
+}
+
+func hashFile(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("sha256:%x", h.Sum(nil)), nil
 }
 
 func checkMagic(f *os.File) error {

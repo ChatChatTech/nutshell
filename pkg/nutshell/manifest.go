@@ -13,7 +13,7 @@ const (
 // Manifest is the nutshell.json schema.
 type Manifest struct {
 	NutshellVersion string       `json:"nutshell_version"`
-	BundleType      string       `json:"bundle_type"` // "request" | "delivery"
+	BundleType      string       `json:"bundle_type"` // "request" | "delivery" | "template" | "checkpoint" | "partial"
 	ID              string       `json:"id"`
 	CreatedAt       string       `json:"created_at"`
 	ExpiresAt       string       `json:"expires_at,omitempty"`
@@ -70,6 +70,7 @@ type FileEntry struct {
 	Path string `json:"path"`
 	Size int64  `json:"size"`
 	Role string `json:"role,omitempty"` // "scaffold" | "reference" | "specification"
+	Hash string `json:"hash,omitempty"` // "sha256:<hex>"
 }
 
 type APIConfig struct {

@@ -27,8 +27,16 @@ func Validate(manifest *Manifest) *ValidationResult {
 	}
 	if manifest.BundleType == "" {
 		r.Errors = append(r.Errors, "Missing required field: bundle_type")
-	} else if manifest.BundleType != "request" && manifest.BundleType != "delivery" {
-		r.Errors = append(r.Errors, fmt.Sprintf("Invalid bundle_type: '%s' (must be 'request' or 'delivery')", manifest.BundleType))
+	} else {
+		validTypes := map[string]bool{
+			"request": true, "delivery": true,
+			"template": true, "checkpoint": true, "partial": true,
+		}
+		if !validTypes[manifest.BundleType] {
+			r.Errors = append(r.Errors, fmt.Sprintf(
+				"Invalid bundle_type: '%s' (must be request|delivery|template|checkpoint|partial)",
+				manifest.BundleType))
+		}
 	}
 	if manifest.ID == "" {
 		r.Errors = append(r.Errors, "Missing required field: id")

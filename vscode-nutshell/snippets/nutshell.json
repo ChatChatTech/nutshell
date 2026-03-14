@@ -1,0 +1,107 @@
+{
+  "Nutshell Manifest (full)": {
+    "prefix": "nutshell-manifest",
+    "scope": "json",
+    "description": "Complete nutshell.json manifest scaffold",
+    "body": [
+      "{",
+      "  \"nutshell_version\": \"0.2.0\",",
+      "  \"bundle_type\": \"${1|request,delivery,template,checkpoint,partial|}\",",
+      "  \"id\": \"${2:nut-00000000-0000-0000-0000-000000000000}\",",
+      "  \"created_at\": \"${3:${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE}T${CURRENT_HOUR}:${CURRENT_MINUTE}:${CURRENT_SECOND}Z}\",",
+      "  \"task\": {",
+      "    \"title\": \"${4:Task title}\",",
+      "    \"summary\": \"${5:Detailed description}\",",
+      "    \"priority\": \"${6|medium,critical,high,low|}\",",
+      "    \"estimated_effort\": \"${7:2h}\"",
+      "  },",
+      "  \"tags\": {",
+      "    \"skills_required\": [\"${8:golang}\"],",
+      "    \"domains\": [\"${9:backend}\"]",
+      "  },",
+      "  \"context\": {",
+      "    \"requirements\": \"context/requirements.md\"",
+      "  },",
+      "  \"harness\": {",
+      "    \"agent_type_hint\": \"${10|execution,research,review,creative|}\",",
+      "    \"context_budget_hint\": 0.35,",
+      "    \"execution_strategy\": \"${11|incremental,batch,streaming|}\"",
+      "  }",
+      "}"
+    ]
+  },
+  "Nutshell Task": {
+    "prefix": "nut-task",
+    "scope": "json",
+    "description": "Task section for nutshell.json",
+    "body": [
+      "\"task\": {",
+      "  \"title\": \"${1:Task title}\",",
+      "  \"summary\": \"${2:Detailed description}\",",
+      "  \"priority\": \"${3|medium,critical,high,low|}\",",
+      "  \"estimated_effort\": \"${4:2h}\"",
+      "}"
+    ]
+  },
+  "Nutshell Credentials": {
+    "prefix": "nut-credentials",
+    "scope": "json",
+    "description": "Credentials section for nutshell.json",
+    "body": [
+      "\"credentials\": {",
+      "  \"vault\": \"${1:credentials/vault.age}\",",
+      "  \"encryption\": \"${2|age,sops,vault,none|}\",",
+      "  \"scopes\": [",
+      "    {",
+      "      \"name\": \"${3:api-key}\",",
+      "      \"type\": \"${4:api_key}\",",
+      "      \"access_level\": \"${5:read}\",",
+      "      \"expires_at\": \"${6:2025-12-31T00:00:00Z}\"",
+      "    }",
+      "  ]",
+      "}"
+    ]
+  },
+  "Nutshell Acceptance": {
+    "prefix": "nut-acceptance",
+    "scope": "json",
+    "description": "Acceptance criteria section",
+    "body": [
+      "\"acceptance\": {",
+      "  \"criteria_file\": \"${1:context/acceptance.md}\",",
+      "  \"test_scripts\": [\"${2:tests/run.sh}\"],",
+      "  \"auto_verifiable\": ${3|true,false|},",
+      "  \"human_review_required\": ${4|false,true|},",
+      "  \"checklist\": [",
+      "    \"${5:All tests pass}\",",
+      "    \"${6:Code reviewed}\"",
+      "  ]",
+      "}"
+    ]
+  },
+  "Nutshell Harness": {
+    "prefix": "nut-harness",
+    "scope": "json",
+    "description": "Harness hints section",
+    "body": [
+      "\"harness\": {",
+      "  \"agent_type_hint\": \"${1|execution,research,review,creative|}\",",
+      "  \"context_budget_hint\": ${2:0.35},",
+      "  \"execution_strategy\": \"${3|incremental,batch,streaming|}\",",
+      "  \"checkpoints\": ${4|true,false|},",
+      "  \"constraints\": [\"${5:Do not modify files outside src/}\"]",
+      "}"
+    ]
+  },
+  "Nutshell Resources": {
+    "prefix": "nut-resources",
+    "scope": "json",
+    "description": "External resources section",
+    "body": [
+      "\"resources\": {",
+      "  \"repos\": [{\"url\": \"${1:https://github.com/...}\"}],",
+      "  \"docs\": [{\"url\": \"${2:https://...}\", \"title\": \"${3:Documentation}\"}]",
+      "}"
+    ]
+  }
+}

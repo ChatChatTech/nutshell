@@ -1,0 +1,349 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/ChatChatTech/nutshell/schema/nutshell.schema.json",
+  "title": "Nutshell Manifest",
+  "description": "Schema for nutshell.json — the AI agent task packaging manifest (v0.2.0)",
+  "type": "object",
+  "required": ["nutshell_version", "bundle_type", "id", "task"],
+  "properties": {
+    "nutshell_version": {
+      "type": "string",
+      "description": "Specification version",
+      "enum": ["0.2.0"]
+    },
+    "bundle_type": {
+      "type": "string",
+      "description": "Type of bundle",
+      "enum": ["request", "delivery", "template", "checkpoint", "partial"]
+    },
+    "id": {
+      "type": "string",
+      "description": "Unique bundle identifier (nut-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)",
+      "pattern": "^nut-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "created_at": {
+      "type": "string",
+      "description": "ISO 8601 / RFC 3339 timestamp",
+      "format": "date-time"
+    },
+    "expires_at": {
+      "type": "string",
+      "description": "Bundle expiration timestamp",
+      "format": "date-time"
+    },
+    "parent_id": {
+      "type": "string",
+      "description": "ID of the parent bundle (for delivery → request chaining)"
+    },
+    "task": {
+      "type": "object",
+      "description": "Core task definition",
+      "required": ["title"],
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Short, actionable task title"
+        },
+        "summary": {
+          "type": "string",
+          "description": "Detailed description of the task"
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"],
+          "default": "medium"
+        },
+        "estimated_effort": {
+          "type": "string",
+          "description": "Estimated effort (e.g. '2h', '1d', '1w')"
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "description": "Categorization and matching tags",
+      "properties": {
+        "skills_required": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Skills the agent needs (e.g. 'golang', 'postgresql')"
+        },
+        "domains": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Domain categories (e.g. 'backend', 'ml')"
+        },
+        "data_sources": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Data sources involved"
+        },
+        "custom": {
+          "type": "object",
+          "description": "Custom key-value tags",
+          "additionalProperties": true
+        }
+      }
+    },
+    "publisher": {
+      "type": "object",
+      "description": "Who created this bundle",
+      "properties": {
+        "name": {"type": "string"},
+        "contact": {"type": "string"},
+        "tool": {
+          "type": "string",
+          "description": "Tool used to create the bundle (e.g. 'claude-code', 'copilot')"
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "description": "Paths to context documents inside the bundle",
+      "properties": {
+        "requirements": {
+          "type": "string",
+          "description": "Path to requirements document"
+        },
+        "architecture": {
+          "type": "string",
+          "description": "Path to architecture document"
+        },
+        "references": {
+          "type": "string",
+          "description": "Path to references document"
+        },
+        "additional": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Additional context file paths"
+        }
+      }
+    },
+    "files": {
+      "type": "object",
+      "description": "File manifest (auto-populated by pack)",
+      "properties": {
+        "total_count": {"type": "integer"},
+        "total_size_bytes": {"type": "integer"},
+        "tree": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {"type": "string"},
+              "size": {"type": "integer"},
+              "role": {
+                "type": "string",
+                "enum": ["scaffold", "reference", "specification"]
+              },
+              "hash": {
+                "type": "string",
+                "description": "SHA-256 content hash (sha256:hex)"
+              }
+            },
+            "required": ["path", "size"]
+          }
+        }
+      }
+    },
+    "apis": {
+      "type": "object",
+      "description": "API configuration for callable endpoints",
+      "properties": {
+        "endpoints_spec": {
+          "type": "string",
+          "description": "Path to OpenAPI/Swagger spec file"
+        },
+        "base_urls": {
+          "type": "object",
+          "additionalProperties": {"type": "string"},
+          "description": "Named base URLs (e.g. {\"staging\": \"https://...\"})"
+        },
+        "auth_method": {
+          "type": "string",
+          "enum": ["none", "bearer", "api_key", "oauth2", "basic"]
+        },
+        "credential_ref": {
+          "type": "string",
+          "description": "Reference to credential scope name"
+        }
+      }
+    },
+    "credentials": {
+      "type": "object",
+      "description": "Encrypted credential vault",
+      "properties": {
+        "vault": {
+          "type": "string",
+          "description": "Path to encrypted vault file"
+        },
+        "encryption": {
+          "type": "string",
+          "enum": ["age", "sops", "vault", "none"],
+          "description": "Encryption method"
+        },
+        "scopes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "type"],
+            "properties": {
+              "name": {"type": "string"},
+              "type": {"type": "string"},
+              "access_level": {"type": "string"},
+              "rate_limit": {"type": "string"},
+              "expires_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          }
+        }
+      }
+    },
+    "acceptance": {
+      "type": "object",
+      "description": "Acceptance criteria and verification",
+      "properties": {
+        "criteria_file": {"type": "string"},
+        "test_scripts": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "auto_verifiable": {"type": "boolean"},
+        "human_review_required": {"type": "boolean"},
+        "checklist": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "List of acceptance criteria"
+        }
+      }
+    },
+    "harness": {
+      "type": "object",
+      "description": "Hints for the agent harness / orchestration layer",
+      "properties": {
+        "agent_type_hint": {
+          "type": "string",
+          "enum": ["execution", "research", "review", "creative"],
+          "description": "Suggested agent specialization"
+        },
+        "context_budget_hint": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Fraction of context window to use (0.35 = 35%)"
+        },
+        "execution_strategy": {
+          "type": "string",
+          "enum": ["incremental", "batch", "streaming"],
+          "description": "How the agent should execute"
+        },
+        "checkpoints": {
+          "type": "boolean",
+          "description": "Whether the agent should create intermediate checkpoints"
+        },
+        "constraints": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Machine-readable constraints (e.g. 'Do not modify files outside src/')"
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "description": "External resource references",
+      "properties": {
+        "repos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "url": {"type": "string", "format": "uri"},
+              "branch": {"type": "string"},
+              "relevance": {"type": "string"}
+            },
+            "required": ["url"]
+          }
+        },
+        "docs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "url": {"type": "string", "format": "uri"},
+              "title": {"type": "string"}
+            },
+            "required": ["url"]
+          }
+        },
+        "images": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {"type": "string"},
+              "description": {"type": "string"}
+            },
+            "required": ["path"]
+          }
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "url": {"type": "string", "format": "uri"},
+              "title": {"type": "string"}
+            },
+            "required": ["url"]
+          }
+        }
+      }
+    },
+    "completeness": {
+      "type": "object",
+      "description": "Completeness status (updated by 'nutshell check')",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["draft", "incomplete", "ready"]
+        },
+        "missing": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "warnings": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "compression": {
+      "type": "object",
+      "description": "Compression metadata",
+      "properties": {
+        "algorithm": {"type": "string"},
+        "original_size_bytes": {"type": "integer"},
+        "compressed_size_bytes": {"type": "integer"},
+        "context_tokens_estimate": {"type": "integer"}
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Platform-specific extensions (ignored by tools that don't understand them)",
+      "additionalProperties": true
+    }
+  },
+  "if": {
+    "properties": {"bundle_type": {"const": "request"}}
+  },
+  "then": {
+    "properties": {
+      "task": {
+        "required": ["title"]
+      }
+    }
+  }
+}

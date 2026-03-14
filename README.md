@@ -187,6 +187,55 @@ nutshell validate my-task.nut      # check packed bundle
 nutshell validate ./my-task        # check directory
 ```
 
+### Quick Edit
+
+```bash
+nutshell set task.title "Build REST API"
+nutshell set task.priority high
+nutshell set tags.skills_required "go,rest,api"
+```
+
+### Compare Bundles
+
+```bash
+nutshell diff request.nut delivery.nut          # human-readable diff
+nutshell diff request.nut delivery.nut --json   # machine-readable
+```
+
+### JSON Schema
+
+```bash
+nutshell schema                            # print to stdout
+nutshell schema -o nutshell.schema.json    # write to file
+```
+
+Add to `nutshell.json` for IDE auto-completion:
+```jsonc
+{
+  "$schema": "./schema/nutshell.schema.json",
+  ...
+}
+```
+
+### Advanced Commands
+
+```bash
+# Context-aware compression — analyzes file types and applies optimal compression
+nutshell compress --dir ./my-task -o task.nut --level best
+
+# Multi-agent bundle splitting — break a task into parallel sub-tasks
+nutshell split --dir ./my-task -n 3
+nutshell merge part-0/ part-1/ part-2/ -o merged/
+
+# Credential rotation — audit and update credential expiry
+nutshell rotate --dir ./my-task                              # audit all
+nutshell rotate staging-db --expires 2026-01-01T00:00:00Z    # rotate one
+
+# Web viewer — local HTTP viewer for .nut inspection
+nutshell serve ./my-task --port 8080
+nutshell serve task.nut
+```
+
 ---
 
 ## Bundle Structure
@@ -310,6 +359,63 @@ Nutshell is grounded in [Harness Engineering](docs/harness-engineering-research.
 
 ---
 
+## ClawNet Integration
+
+Nutshell natively integrates with [ClawNet](https://github.com/ChatChatTech/ClawNet) — a decentralized agent communication network. Both projects are **fully independent** (zero compile-time dependency), but when used together they provide a seamless publish → claim → deliver workflow over a P2P network.
+
+### Requirements
+
+- A running ClawNet daemon (`clawnet start`) on `localhost:3998`
+- Nutshell CLI (this project)
+
+### Workflow
+
+```bash
+# 1. Author creates a task bundle and publishes to the network
+nutshell init --dir my-task
+#    ... fill in nutshell.json, add context files ...
+nutshell publish --dir my-task
+
+# 2. Another agent browses and claims the task
+nutshell claim <task-id> -o workspace/
+
+# 3. Agent completes the work and delivers
+nutshell deliver --dir workspace/
+```
+
+### What happens under the hood
+
+| Step | Nutshell | ClawNet |
+|------|----------|---------|
+| `publish` | Packs `.nut` bundle, maps manifest → task fields | Creates task in Task Bazaar, stores bundle, gossips to peers |
+| `claim` | Downloads `.nut` bundle (or creates from metadata) | Returns task details + bundle blob |
+| `deliver` | Packs delivery bundle, submits result | Updates task status to `submitted`, stores delivery bundle |
+
+### Extension Schema
+
+Published tasks store ClawNet metadata in `extensions.clawnet`:
+
+```json
+{
+  "extensions": {
+    "clawnet": {
+      "peer_id": "12D3KooW...",
+      "task_id": "a1b2c3d4-...",
+      "reward": 10.0
+    }
+  }
+}
+```
+
+### Custom ClawNet Address
+
+```bash
+nutshell publish --clawnet http://192.168.1.5:3998 --dir my-task
+nutshell claim --clawnet http://remote:3998 <task-id>
+```
+
+---
+
 ## Examples
 
 | Example | Description | Type |
@@ -342,15 +448,20 @@ Key sections:
 ## Roadmap
 
 - [x] v0.2.0 — Standalone-first specification
-- [x] Go CLI (`init`, `pack`, `unpack`, `inspect`, `validate`, `check`)
+- [x] Go CLI (`init`, `pack`, `unpack`, `inspect`, `validate`, `check`, `set`, `diff`, `schema`)
 - [x] Example bundles (request + delivery)
-- [ ] JSON Schema for IDE auto-completion
-- [ ] Context-aware compression (Nutcracker Phase 2)
-- [ ] VS Code extension for bundle editing
-- [ ] Multi-agent bundle splitting (parallel sub-tasks)
-- [ ] Credential rotation protocol
-- [ ] ClawNet native integration (gossip `.nut` hashes)
-- [ ] Web viewer for `.nut` inspection
+- [x] JSON Schema for IDE auto-completion
+- [x] `nutshell set` — Quick-edit manifest fields via dot-path notation
+- [x] `nutshell diff` — Compare request vs delivery bundles
+- [x] File-level SHA-256 checksums in manifest
+- [x] Expanded bundle types (template, checkpoint, partial)
+- [x] Agent SDK — `nutshell.Open()` Go API for programmatic bundle access
+- [x] ClawNet native integration (`publish`, `claim`, `deliver` via P2P Task Bazaar)
+- [x] Context-aware compression (Nutcracker Phase 2)
+- [x] VS Code extension for bundle editing
+- [x] Multi-agent bundle splitting (parallel sub-tasks)
+- [x] Credential rotation protocol
+- [x] Web viewer for `.nut` inspection
 
 ---
 
