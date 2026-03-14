@@ -6,7 +6,7 @@
 
 **一个开放标准，用于打包 AI 代理可理解的任务上下文。**
 
-兼容任意代理：Claude Code · Copilot · Cursor · Aider · 自定义代理
+兼容任意代理：Claude Code · Copilot · Cursor · OpenClaw · 自定义代理
 
 [规范](spec/nutshell-spec-v0.2.0.md) · [示例](examples/) · [研究](docs/harness-engineering-research.md) · [网站](https://chatchat.space/nutshell/)
 
