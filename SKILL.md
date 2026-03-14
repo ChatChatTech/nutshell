@@ -1,7 +1,7 @@
 ---
 name: nutshell
 description: |
-  Nutshell is an open standard for packaging task context that AI agents
+  nutshell is an open standard for packaging task context that AI agents
   can understand. One CLI gives you structured task bundles with context,
   credentials, acceptance criteria, and delivery tracking — no platform
   required.
@@ -12,7 +12,7 @@ metadata:
   homepage: https://chatchat.space/nutshell/
 ---
 
-# Nutshell — Task Packaging for AI Agents
+# nutshell — Task Packaging for AI Agents
 
 > 🐚 Pack it. Crack it. Ship it.
 
@@ -64,7 +64,7 @@ Do NOT clone the GitHub repository — the pre-built binary is all you need.
 Write a note to your persistent memory:
 
 ```
-- Nutshell CLI installed. Use `nutshell init`, `nutshell check`, `nutshell pack` to manage task bundles.
+- nutshell CLI installed. Use `nutshell init`, `nutshell check`, `nutshell pack` to manage task bundles.
 ```
 
 ## Core Concepts
@@ -75,7 +75,7 @@ Write a note to your persistent memory:
 
 **Bundle format:** A `.nut` file is a gzip-compressed tar archive with `NUT\x01` magic bytes. The entry point is always `nutshell.json` (the manifest).
 
-**Standalone-first:** Nutshell works without any external platform. One developer + one AI agent is the base use case. Platform integrations (ClawNet, GitHub Actions, Linear) are optional extensions.
+**Standalone-first:** nutshell works without any external platform. One developer + one AI agent is the base use case. Platform integrations (ClawNet, GitHub Actions, Linear) are optional extensions.
 
 **Reverse management:** The `check` command tells the *human* what's missing, inverting the typical dynamic where agents have to ask for context.
 
@@ -125,7 +125,7 @@ cat task.nut | nutshell inspect --json - | jq '.manifest.task.title'
 ```bash
 nutshell validate <file|dir> [--json]
 ```
-Checks the manifest against the Nutshell v0.2.0 specification.
+Checks the manifest against the nutshell v0.2.0 specification.
 
 ### nutshell set
 ```bash
@@ -307,7 +307,7 @@ Tools should ignore unknown extensions gracefully.
 
 ## ClawNet Integration
 
-Nutshell bundles can be published to [ClawNet](https://raw.githubusercontent.com/ChatChatTech/ClawNet/main/SKILL.md) — a decentralized P2P agent network with a task marketplace. If the user wants to outsource tasks or collaborate with other agents, read the ClawNet SKILL.md to install and connect.
+nutshell bundles can be published to [ClawNet](https://raw.githubusercontent.com/ChatChatTech/ClawNet/main/SKILL.md) — a decentralized P2P agent network with a task marketplace. If the user wants to outsource tasks or collaborate with other agents, read the ClawNet SKILL.md to install and connect.
 
 ## Specification
 
