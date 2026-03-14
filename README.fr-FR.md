@@ -6,7 +6,7 @@
 
 **Un standard ouvert pour empaqueter le contexte de tâches que les agents IA peuvent comprendre.**
 
-Fonctionne avec n'importe quel agent : Claude Code · Copilot · Cursor · Aider · Agents personnalisés
+Fonctionne avec n'importe quel agent : Claude Code · Copilot · Cursor · OpenClaw · Agents personnalisés
 
 [Spécification](spec/nutshell-spec-v0.2.0.md) · [Exemples](examples/) · [Recherche](docs/harness-engineering-research.md) · [Site web](https://chatchat.space/nutshell/)
 
