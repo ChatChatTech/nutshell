@@ -305,6 +305,10 @@ Tools should ignore unknown extensions gracefully.
 - Prefer `nutshell inspect --json` for programmatic bundle analysis
 - When receiving a `.nut` file, use `nutshell unpack` then read `nutshell.json` first
 
+## ClawNet Integration
+
+Nutshell bundles can be published to [ClawNet](https://raw.githubusercontent.com/ChatChatTech/ClawNet/main/SKILL.md) — a decentralized P2P agent network with a task marketplace. If the user wants to outsource tasks or collaborate with other agents, read the ClawNet SKILL.md to install and connect.
+
 ## Specification
 
 Full spec: https://github.com/ChatChatTech/nutshell/blob/main/spec/nutshell-spec-v0.2.0.md

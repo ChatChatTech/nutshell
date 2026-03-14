@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strings"
@@ -860,12 +861,39 @@ func cmdPublish(args []string) {
 		dir = "."
 	}
 
-	// Verify ClawNet is reachable
+	// Step 1: Check if ClawNet binary is installed
+	if _, err := exec.LookPath("clawnet"); err != nil {
+		fmt.Fprintf(os.Stderr, "%s✗%s ClawNet CLI is not installed\n", red, reset)
+		fmt.Fprintf(os.Stderr, "  %sInstall: curl -fsSL https://chatchat.space/releases/install.sh | bash%s\n", dim, reset)
+		fmt.Fprintf(os.Stderr, "  %sThen:    clawnet init && clawnet start%s\n", dim, reset)
+		os.Exit(1)
+	}
+
+	// Step 2: Verify ClawNet daemon is reachable
 	status, err := client.Ping()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s✗%s %s\n", red, reset, err)
-		fmt.Fprintf(os.Stderr, "  %sHint: Is ClawNet daemon running? (clawnet start)%s\n", dim, reset)
+		fmt.Fprintf(os.Stderr, "%s✗%s ClawNet daemon is not running\n", red, reset)
+		fmt.Fprintf(os.Stderr, "  %sStart it: clawnet start%s\n", dim, reset)
+		fmt.Fprintf(os.Stderr, "  %sCheck:    clawnet status%s\n", dim, reset)
 		os.Exit(1)
+	}
+
+	// Step 3: Check credit balance
+	credits, err := client.GetCreditBalance()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s⚠%s Could not check credit balance: %s\n", yellow, reset, err)
+		// Non-fatal: proceed and let the daemon reject if insufficient
+	} else {
+		available := credits.Balance
+		if credits.Energy > 0 {
+			available = credits.Energy
+		}
+		fmt.Printf("%s▸%s ClawNet connected — %s (%s)%s\n", cyan, reset, status.AgentName, status.PeerID[:16]+"...", reset)
+		fmt.Printf("  %sCredits: %.1f available, %.1f frozen%s\n", dim, available, credits.Frozen, reset)
+		if available < 10.0 {
+			fmt.Fprintf(os.Stderr, "%s⚠%s Low credit balance (%.1f). Default task reward is 10.0 energy.\n", yellow, reset, available)
+			fmt.Fprintf(os.Stderr, "  %sPublishing may fail if credits are insufficient.%s\n", dim, reset)
+		}
 	}
 
 	// Read manifest
@@ -904,7 +932,13 @@ func cmdPublish(args []string) {
 	// Publish task to ClawNet
 	task, err := client.PublishTask(&manifest, nutHash)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s✗%s %s\n", red, reset, err)
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "insufficient") || strings.Contains(errMsg, "credits") {
+			fmt.Fprintf(os.Stderr, "%s✗%s Insufficient credits to publish this task\n", red, reset)
+			fmt.Fprintf(os.Stderr, "  %sDefault task reward is 10.0 energy. Check balance: curl http://localhost:3998/api/credits/balance%s\n", dim, reset)
+		} else {
+			fmt.Fprintf(os.Stderr, "%s✗%s %s\n", red, reset, err)
+		}
 		os.Exit(1)
 	}
 
@@ -940,10 +974,18 @@ func cmdClaim(args []string) {
 		os.Exit(1)
 	}
 
-	// Verify ClawNet is reachable
+	// Step 1: Check if ClawNet binary is installed
+	if _, err := exec.LookPath("clawnet"); err != nil {
+		fmt.Fprintf(os.Stderr, "%s✗%s ClawNet is not installed\n", red, reset)
+		fmt.Fprintf(os.Stderr, "  %sInstall: curl -fsSL https://chatchat.space/releases/install.sh | sh%s\n", dim, reset)
+		os.Exit(1)
+	}
+
+	// Step 2: Verify ClawNet daemon is reachable
 	_, err := client.Ping()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s✗%s %s\n", red, reset, err)
+		fmt.Fprintf(os.Stderr, "%s✗%s ClawNet daemon is not running\n", red, reset)
+		fmt.Fprintf(os.Stderr, "  %sStart it with: clawnet start%s\n", dim, reset)
 		os.Exit(1)
 	}
 
@@ -1045,10 +1087,18 @@ func cmdDeliver(args []string) {
 		os.Exit(1)
 	}
 
-	// Verify ClawNet is reachable
+	// Check if ClawNet binary is installed
+	if _, err := exec.LookPath("clawnet"); err != nil {
+		fmt.Fprintf(os.Stderr, "%s✗%s ClawNet is not installed\n", red, reset)
+		fmt.Fprintf(os.Stderr, "  %sInstall: curl -fsSL https://chatchat.space/releases/install.sh | sh%s\n", dim, reset)
+		os.Exit(1)
+	}
+
+	// Verify ClawNet daemon is reachable
 	_, err = client.Ping()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s✗%s %s\n", red, reset, err)
+		fmt.Fprintf(os.Stderr, "%s✗%s ClawNet daemon is not running\n", red, reset)
+		fmt.Fprintf(os.Stderr, "  %sStart it with: clawnet start%s\n", dim, reset)
 		os.Exit(1)
 	}
 

@@ -236,3 +236,25 @@ func ManifestToClawNetExtension(peerID, taskID string, reward float64) json.RawM
 	data, _ := json.Marshal(ext)
 	return json.RawMessage(data)
 }
+
+// CreditBalance represents a ClawNet credit account.
+type CreditBalance struct {
+	PeerID  string  `json:"peer_id"`
+	Balance float64 `json:"balance"`
+	Energy  float64 `json:"energy"`
+	Frozen  float64 `json:"frozen"`
+}
+
+// GetCreditBalance fetches the credit balance from the ClawNet daemon.
+func (c *ClawNetClient) GetCreditBalance() (*CreditBalance, error) {
+	resp, err := c.HTTPClient.Get(c.BaseURL + "/api/credits/balance")
+	if err != nil {
+		return nil, fmt.Errorf("fetching credits: %w", err)
+	}
+	defer resp.Body.Close()
+	var bal CreditBalance
+	if err := json.NewDecoder(resp.Body).Decode(&bal); err != nil {
+		return nil, fmt.Errorf("decoding credits: %w", err)
+	}
+	return &bal, nil
+}
