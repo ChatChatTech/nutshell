@@ -1,21 +1,16 @@
 <div align="center">
 
-```
-         ╭──────────────────────────────╮
-         │    🐚  N U T S H E L L  🦞   │
-         │                              │
-         │   Task Packaging Standard    │
-         │     for AI Agents            │
-         ╰──────────────────────────────╯
-```
+<img src="nutshell-icon.svg" width="80" height="80" alt="nutshell icon" />
 
-# Nutshell
+# nutshell
 
 **An open standard for packaging task context that AI agents can understand.**
 
 Works with any agent: Claude Code · Copilot · Cursor · Aider · Custom agents
 
-[Specification](spec/nutshell-spec-v0.2.0.md) · [Examples](examples/) · [Research](docs/harness-engineering-research.md)
+[Specification](spec/nutshell-spec-v0.2.0.md) · [Examples](examples/) · [Research](docs/harness-engineering-research.md) · [Website](https://chatchat.space/nutshell/)
+
+**[English](README.md)** | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-HANT.md) | [Español](README.es-ES.md) | [Français](README.fr-FR.md)
 
 </div>
 
@@ -122,12 +117,15 @@ But you don't need to be a lobster. Any agent can eat a nutshell.
 ### Install
 
 ```bash
-git clone https://github.com/ChatChatTech/nutshell.git
-cd nutshell
-make build
+# One-line install (auto-detects OS/arch)
+curl -fsSL https://chatchat.space/nutshell/install.sh | sh
 
-# or install globally
-go install ./cmd/nutshell/
+# Or via Go
+go install github.com/ChatChatTech/nutshell/cmd/nutshell@latest
+
+# Or build from source
+git clone https://github.com/ChatChatTech/nutshell.git
+cd nutshell && make build
 ```
 
 ### Create a Task
