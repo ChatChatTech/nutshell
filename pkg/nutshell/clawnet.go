@@ -79,7 +79,8 @@ func (c *ClawNetClient) Ping() (*ClawNetStatus, error) {
 
 // PublishTask creates a task in ClawNet's Task Bazaar from a nutshell manifest.
 // If reward > 0, it is sent to the daemon; otherwise the daemon applies its default.
-func (c *ClawNetClient) PublishTask(m *Manifest, nutHash string, reward float64) (*ClawNetTask, error) {
+// If targetPeer is non-empty, the task is targeted to that specific peer.
+func (c *ClawNetClient) PublishTask(m *Manifest, nutHash string, reward float64, targetPeer string) (*ClawNetTask, error) {
 	// Map nutshell manifest → ClawNet task fields
 	tags, _ := json.Marshal(m.Tags.SkillsRequired)
 
@@ -101,6 +102,9 @@ func (c *ClawNetClient) PublishTask(m *Manifest, nutHash string, reward float64)
 	}
 	body["nutshell_id"] = m.ID
 	body["bundle_type"] = m.BundleType
+	if targetPeer != "" {
+		body["target_peer"] = targetPeer
+	}
 
 	_ = tags // used in the map above as array
 

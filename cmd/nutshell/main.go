@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/ed25519"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -34,7 +35,8 @@ func usage() {
 	fmt.Println("Usage:")
 	fmt.Println("  nutshell init     [--dir <path>]                  Initialize a new bundle directory")
 	fmt.Println("  nutshell pack     [--dir <path>] [-o <file>]      Pack directory into .nut bundle")
-	fmt.Println("  nutshell unpack   <file> [-o <path>]              Unpack a .nut bundle")
+	fmt.Println("  nutshell pack     --encrypt --peer <pubkey>       Pack & encrypt for a specific peer")
+	fmt.Println("  nutshell unpack   <file> [-o <path>]              Unpack a .nut bundle (auto-decrypts)")
 	fmt.Println("  nutshell inspect  <file|-> [--json]               Inspect bundle without unpacking")
 	fmt.Println("  nutshell validate <file|dir> [--json]             Validate bundle against spec")
 	fmt.Println("  nutshell check    [--dir <path>] [--json]         Completeness check — what's missing?")
@@ -50,7 +52,7 @@ func usage() {
 	fmt.Println("  nutshell serve    [<file|dir>] [--port <port>]    Web viewer for .nut inspection")
 	fmt.Println()
 	fmt.Println("  ClawNet Integration (optional — requires running ClawNet daemon):")
-	fmt.Println("  nutshell publish  [--dir <path>] [--clawnet <addr>]  Pack & publish task to ClawNet network")
+	fmt.Println("  nutshell publish  [--dir <path>] [--peer <pubkey>]   Pack & publish (--peer encrypts + targets)")
 	fmt.Println("  nutshell claim    <task-id> [--clawnet <addr>]       Claim a task from ClawNet, create local dir")
 	fmt.Println("  nutshell deliver  [--dir <path>] [--clawnet <addr>]  Pack delivery & submit to ClawNet task")
 	fmt.Println()
@@ -133,20 +135,27 @@ var subHelpText = map[string]string{
   Flags:
     --dir, -d <path>   Target directory (default: .)`,
 
-	"pack": `pack [--dir <path>] [-o <file>]
+	"pack": `pack [--dir <path>] [-o <file>] [--encrypt --peer <pubkey>]
 
   Pack a directory into a .nut bundle.
+  With --encrypt --peer, the bundle is encrypted for the given peer's Ed25519
+  public key. Only that peer can unpack it.
 
   Flags:
-    --dir, -d <path>   Source directory (default: .)
-    -o <file>          Output filename (default: <slug>.nut)`,
+    --dir, -d <path>      Source directory (default: .)
+    -o <file>             Output filename (default: <slug>.nut)
+    --encrypt             Encrypt the bundle for a specific peer
+    --peer <hex-pubkey>   Recipient's Ed25519 public key (64 hex chars)`,
 
-	"unpack": `unpack <file> [-o <path>]
+	"unpack": `unpack <file> [-o <path>] [--identity <keyfile>]
 
   Unpack a .nut bundle into a directory.
+  Encrypted bundles (NUT\x02) are automatically detected and decrypted
+  using the local ClawNet identity key.
 
   Flags:
-    -o <path>   Output directory (default: derived from bundle name)`,
+    -o <path>              Output directory (default: derived from bundle name)
+    --identity <keyfile>   Identity key path (default: ~/.openclaw/clawnet/identity.key)`,
 
 	"inspect": `inspect <file|-> [--json]
 
@@ -244,15 +253,16 @@ var subHelpText = map[string]string{
   Flags:
     --port, -p <port>   Port to listen on (default: 3000)`,
 
-	"publish": `publish [--dir <path>] [--reward <amount>] [--clawnet <addr>]
+	"publish": `publish [--dir <path>] [--reward <amount>] [--peer <pubkey>] [--clawnet <addr>]
 
   Pack & publish a task to the ClawNet network.
-  Reads reward from extensions.clawnet.reward.amount in the manifest
-  if present; otherwise uses --reward flag or daemon default (1.0 energy).
+  With --peer, the bundle is encrypted for that peer and the task is
+  targeted (only that peer can accept and decrypt it).
 
   Flags:
     --dir, -d <path>       Source directory (default: .)
     --reward <amount>      Reward in energy (default: 1.0)
+    --peer <hex-pubkey>    Target peer (encrypts bundle + restricts task)
     --clawnet <addr>       ClawNet daemon address (default: http://localhost:3998)`,
 
 	"claim": `claim <task-id> [--clawnet <addr>] [-o <dir>]
@@ -350,7 +360,14 @@ func cmdPack(args []string) {
 	if dir == "" {
 		dir = "."
 	}
-	output, _ := getFlag(args, "--output", "-o")
+	output, args := getFlag(args, "--output", "-o")
+	encrypt, args := hasFlag(args, "--encrypt")
+	peerHex, _ := getFlag(args, "--peer")
+
+	if encrypt && peerHex == "" {
+		fmt.Fprintf(os.Stderr, "%s✗%s --encrypt requires --peer <hex-pubkey>\n", red, reset)
+		os.Exit(1)
+	}
 
 	// Determine output path
 	if output == "" {
@@ -376,6 +393,21 @@ func cmdPack(args []string) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s✗%s %s\n", red, reset, err)
 		os.Exit(1)
+	}
+
+	// Encrypt if requested
+	if encrypt {
+		pubKey, err := nutshell.ParsePeerPubKey(peerHex)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s✗%s %s\n", red, reset, err)
+			os.Exit(1)
+		}
+		encOutput := output // overwrite in place
+		if err := nutshell.EncryptBundle(output, encOutput, pubKey); err != nil {
+			fmt.Fprintf(os.Stderr, "%s✗%s Encryption failed: %s\n", red, reset, err)
+			os.Exit(1)
+		}
+		fmt.Printf("%s🔒%s Encrypted for peer %s...%s\n", green, reset, peerHex[:16], reset)
 	}
 
 	info, _ := os.Stat(output)
@@ -404,13 +436,48 @@ func cmdUnpack(args []string) {
 		fmt.Fprintf(os.Stderr, "%s✗%s Usage: nutshell unpack <file> [-o <path>]\n", red, reset)
 		os.Exit(1)
 	}
-	output, _ := getFlag(args, "--output", "-o")
+	output, args := getFlag(args, "--output", "-o")
+	identityPath, _ := getFlag(args, "--identity")
 	if output == "" {
 		base := filepath.Base(file)
 		output = strings.TrimSuffix(base, filepath.Ext(base))
 	}
 
-	manifest, err := nutshell.Unpack(file, output)
+	actualFile := file
+
+	// Auto-detect encrypted bundle and decrypt
+	if nutshell.IsEncryptedBundle(file) {
+		fmt.Printf("%s🔒%s Encrypted bundle detected, decrypting...%s\n", cyan, reset, reset)
+		var privKey ed25519.PrivateKey
+		var err error
+		if identityPath != "" {
+			privKey, err = nutshell.LoadIdentityKey(identityPath)
+		} else {
+			privKey, err = nutshell.LoadClawNetIdentity()
+		}
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s✗%s Cannot load identity key: %s\n", red, reset, err)
+			fmt.Fprintf(os.Stderr, "  %sExpected key at ~/.openclaw/clawnet/identity.key%s\n", dim, reset)
+			fmt.Fprintf(os.Stderr, "  %sOr specify: --identity <keyfile>%s\n", dim, reset)
+			os.Exit(1)
+		}
+		plain, err := nutshell.DecryptBundle(file, privKey)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s✗%s Decryption failed: %s\n", red, reset, err)
+			os.Exit(1)
+		}
+		// Write decrypted bundle to temp file
+		tmpFile := file + ".dec"
+		if err := os.WriteFile(tmpFile, plain, 0600); err != nil {
+			fmt.Fprintf(os.Stderr, "%s✗%s %s\n", red, reset, err)
+			os.Exit(1)
+		}
+		defer os.Remove(tmpFile)
+		actualFile = tmpFile
+		fmt.Printf("%s✓%s Decrypted successfully\n", green, reset)
+	}
+
+	manifest, err := nutshell.Unpack(actualFile, output)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s✗%s %s\n", red, reset, err)
 		os.Exit(1)
@@ -1028,6 +1095,8 @@ func cmdPublish(args []string) {
 		dir = "."
 	}
 	rewardStr, args := getFlag(args, "--reward")
+	peerHex, args := getFlag(args, "--peer")
+	_ = args
 
 	// Step 1: Check if ClawNet binary is installed
 	if _, err := exec.LookPath("clawnet"); err != nil {
@@ -1116,11 +1185,25 @@ func cmdPublish(args []string) {
 		os.Exit(1)
 	}
 
+	// Encrypt if --peer is set
+	if peerHex != "" {
+		pubKey, perr := nutshell.ParsePeerPubKey(peerHex)
+		if perr != nil {
+			fmt.Fprintf(os.Stderr, "%s✗%s %s\n", red, reset, perr)
+			os.Exit(1)
+		}
+		if perr := nutshell.EncryptBundle(nutFile, nutFile, pubKey); perr != nil {
+			fmt.Fprintf(os.Stderr, "%s✗%s Encryption failed: %s\n", red, reset, perr)
+			os.Exit(1)
+		}
+		fmt.Printf("%s🔒%s Encrypted for peer %s...%s\n", green, reset, peerHex[:16], reset)
+	}
+
 	// Hash the bundle
 	nutHash, _ := nutshell.HashBundle(nutFile)
 
-	// Publish task to ClawNet
-	task, err := client.PublishTask(&manifest, nutHash, reward)
+	// Publish task to ClawNet (targeted if --peer is set)
+	task, err := client.PublishTask(&manifest, nutHash, reward, peerHex)
 	if err != nil {
 		errMsg := err.Error()
 		if strings.Contains(errMsg, "insufficient") || strings.Contains(errMsg, "credits") {
