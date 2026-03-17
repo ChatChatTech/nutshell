@@ -30,6 +30,8 @@ const shellArt = `
     Task Packaging for AI Agents
 `
 
+const Version = "0.2.3"
+
 func usage() {
 	fmt.Print(shellArt)
 	fmt.Println("Usage:")
@@ -56,6 +58,8 @@ func usage() {
 	fmt.Println("  nutshell publish  [--dir <path>] [--peer <pubkey>]   Pack & publish (--peer encrypts + targets)")
 	fmt.Println("  nutshell claim    <task-id> [--clawnet <addr>]       Claim a task from ClawNet, create local dir")
 	fmt.Println("  nutshell deliver  [--dir <path>] [--clawnet <addr>]  Pack delivery & submit to ClawNet task")
+	fmt.Println()
+	fmt.Println("  nutshell version                                   Show version")
 	fmt.Println()
 }
 
@@ -108,6 +112,8 @@ func main() {
 		cmdClaim(args)
 	case "deliver":
 		cmdDeliver(args)
+	case "version", "--version", "-v":
+		fmt.Printf("nutshell v%s\n", Version)
 	case "help", "--help", "-h":
 		usage()
 	default:
