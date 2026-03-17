@@ -34,8 +34,9 @@ func usage() {
 	fmt.Print(shellArt)
 	fmt.Println("Usage:")
 	fmt.Println("  nutshell init     [--dir <path>]                  Initialize a new bundle directory")
-	fmt.Println("  nutshell pack     [--dir <path>] [-o <file>]      Pack directory into .nut bundle")
+	fmt.Println("  nutshell pack     [--dir <path>] [-o <file>]      Pack directory into .nut bundle (check must pass)")
 	fmt.Println("  nutshell pack     --encrypt --peer <pubkey>       Pack & encrypt for a specific peer")
+	fmt.Println("  nutshell pack     --force                         Pack even if check fails")
 	fmt.Println("  nutshell unpack   <file> [-o <path>]              Unpack a .nut bundle (auto-decrypts)")
 	fmt.Println("  nutshell inspect  <file|-> [--json]               Inspect bundle without unpacking")
 	fmt.Println("  nutshell validate <file|dir> [--json]             Validate bundle against spec")
@@ -135,9 +136,11 @@ var subHelpText = map[string]string{
   Flags:
     --dir, -d <path>   Target directory (default: .)`,
 
-	"pack": `pack [--dir <path>] [-o <file>] [--encrypt --peer <pubkey>]
+	"pack": `pack [--dir <path>] [-o <file>] [--encrypt --peer <pubkey>] [--force]
 
   Pack a directory into a .nut bundle.
+  Runs a completeness check first — if check fails, pack is blocked.
+  Use --force to pack despite check errors.
   With --encrypt --peer, the bundle is encrypted for the given peer's Ed25519
   public key. Only that peer can unpack it.
 
@@ -145,7 +148,8 @@ var subHelpText = map[string]string{
     --dir, -d <path>      Source directory (default: .)
     -o <file>             Output filename (default: <slug>.nut)
     --encrypt             Encrypt the bundle for a specific peer
-    --peer <hex-pubkey>   Recipient's Ed25519 public key (64 hex chars)`,
+    --peer <hex-pubkey>   Recipient's Ed25519 public key (64 hex chars)
+    --force               Pack even if completeness check fails`,
 
 	"unpack": `unpack <file> [-o <path>] [--identity <keyfile>]
 
@@ -362,11 +366,31 @@ func cmdPack(args []string) {
 	}
 	output, args := getFlag(args, "--output", "-o")
 	encrypt, args := hasFlag(args, "--encrypt")
+	force, args := hasFlag(args, "--force")
 	peerHex, _ := getFlag(args, "--peer")
 
 	if encrypt && peerHex == "" {
 		fmt.Fprintf(os.Stderr, "%s✗%s --encrypt requires --peer <hex-pubkey>\n", red, reset)
 		os.Exit(1)
+	}
+
+	// Run completeness check before packing
+	_, checkResult, checkErr := nutshell.Check(dir)
+	if checkErr != nil {
+		fmt.Fprintf(os.Stderr, "%s✗%s Pre-pack check failed: %s\n", red, reset, checkErr)
+		os.Exit(1)
+	}
+	if !checkResult.IsValid() {
+		fmt.Fprintf(os.Stderr, "\n  %s✗ Pack blocked — completeness check failed:%s\n\n", red, reset)
+		for _, e := range checkResult.Errors {
+			fmt.Fprintf(os.Stderr, "    %s✗%s %s\n", red, reset, e)
+		}
+		fmt.Fprintln(os.Stderr)
+		if !force {
+			fmt.Fprintf(os.Stderr, "  Fix the errors above, or use %s--force%s to pack anyway.\n\n", bold, reset)
+			os.Exit(1)
+		}
+		fmt.Fprintf(os.Stderr, "  %s⚠%s --force specified, packing despite errors.\n\n", yellow, reset)
 	}
 
 	// Determine output path
