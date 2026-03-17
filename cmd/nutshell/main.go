@@ -30,7 +30,7 @@ const shellArt = `
     Task Packaging for AI Agents
 `
 
-const Version = "0.2.3"
+const Version = "0.2.4"
 
 func usage() {
 	fmt.Print(shellArt)
