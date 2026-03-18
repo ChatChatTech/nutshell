@@ -208,7 +208,7 @@ var subHelpText = map[string]string{
 
   Examples:
     nutshell set task.title "Build REST API"
-    nutshell set extensions.clawnet.reward.amount 1.5`,
+    nutshell set extensions.clawnet.reward.amount 500`,
 
 	"diff": `diff <bundle-a> <bundle-b> [--json]
 
@@ -271,7 +271,7 @@ var subHelpText = map[string]string{
 
   Flags:
     --dir, -d <path>       Source directory (default: .)
-    --reward <amount>      Reward in energy (default: 1.0)
+    --reward <amount>      Reward in shells (default: 100, minimum: 100)
     --peer <hex-pubkey>    Target peer (encrypts bundle + restricts task)
     --clawnet <addr>       ClawNet daemon address (default: http://localhost:3998)`,
 
@@ -1157,7 +1157,7 @@ func cmdPublish(args []string) {
 		os.Exit(1)
 	}
 
-	// Determine reward: --reward flag > extensions.clawnet.reward.amount > daemon default (1.0)
+	// Determine reward: --reward flag > extensions.clawnet.reward.amount > daemon default (100)
 	var reward float64
 	if rewardStr != "" {
 		reward, err = strconv.ParseFloat(rewardStr, 64)
@@ -1174,7 +1174,7 @@ func cmdPublish(args []string) {
 			}
 		}
 	}
-	// reward == 0 means use daemon default (1.0)
+	// reward == 0 means use daemon default (100)
 
 	// Step 3: Check credit balance
 	credits, cerr := client.GetCreditBalance()
@@ -1189,10 +1189,10 @@ func cmdPublish(args []string) {
 		fmt.Printf("  %sCredits: %.1f available, %.1f frozen%s\n", dim, available, credits.Frozen, reset)
 		effectiveReward := reward
 		if effectiveReward == 0 {
-			effectiveReward = 1.0
+			effectiveReward = 100
 		}
 		if available < effectiveReward {
-			fmt.Fprintf(os.Stderr, "%s⚠%s Low credit balance (%.1f). Task reward is %.1f energy.\n", yellow, reset, available, effectiveReward)
+			fmt.Fprintf(os.Stderr, "%s⚠%s Low credit balance (%.0f). Task reward is %.0f shells.\n", yellow, reset, available, effectiveReward)
 			fmt.Fprintf(os.Stderr, "  %sPublishing may fail if credits are insufficient.%s\n", dim, reset)
 		}
 	}
@@ -1240,9 +1240,9 @@ func cmdPublish(args []string) {
 			fmt.Fprintf(os.Stderr, "%s✗%s Insufficient credits to publish this task\n", red, reset)
 			effectiveReward := reward
 			if effectiveReward == 0 {
-				effectiveReward = 1.0
+				effectiveReward = 100
 			}
-			fmt.Fprintf(os.Stderr, "  %sTask reward is %.1f energy. Check balance: curl http://localhost:3998/api/credits/balance%s\n", dim, effectiveReward, reset)
+			fmt.Fprintf(os.Stderr, "  %sTask reward is %.0f shells. Check balance: curl http://localhost:3998/api/credits/balance%s\n", dim, effectiveReward, reset)
 		} else {
 			fmt.Fprintf(os.Stderr, "%s✗%s %s\n", red, reset, err)
 		}
@@ -1266,7 +1266,7 @@ func cmdPublish(args []string) {
 	fmt.Printf("%s✓%s Published to ClawNet network\n", green, reset)
 	fmt.Printf("  %sTask ID:  %s%s\n", dim, task.ID, reset)
 	fmt.Printf("  %sPeer:     %s (%s)%s\n", dim, status.AgentName, status.PeerID[:16]+"...", reset)
-	fmt.Printf("  %sReward:   %.1f energy%s\n", dim, task.Reward, reset)
+	fmt.Printf("  %sReward:   %.0f shells%s\n", dim, task.Reward, reset)
 	fmt.Printf("  %sBundle:   %s%s\n", dim, nutFile, reset)
 	fmt.Printf("  %sHash:     %s%s\n", dim, nutHash, reset)
 }
@@ -1356,7 +1356,7 @@ func cmdClaim(args []string) {
 	}
 
 	fmt.Printf("  %sTask: %s%s\n", dim, task.Title, reset)
-	fmt.Printf("  %sReward: %.1f energy%s\n", dim, task.Reward, reset)
+	fmt.Printf("  %sReward: %.0f shells%s\n", dim, task.Reward, reset)
 	fmt.Printf("  %sRun 'nutshell check --dir %s' to see what's needed%s\n", dim, outDir, reset)
 }
 

@@ -146,7 +146,7 @@
   "extensions": {
     "clawnet": {
       "peer_id": "12D3KooWRkGLz1YFyfQqLJHMpKrUYhVy4hocPBSMab2GHcBi7whm",
-      "reward": {"amount": 50.0, "currency": "energy"},
+      "reward": {"amount": 500, "currency": "shells"},
       "gossip_topic": "/clawnet/tasks/1.0.0",
       "reputation": 85.0
     }

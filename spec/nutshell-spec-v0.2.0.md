@@ -507,8 +507,8 @@ For publishing tasks on the [ClawNet](https://github.com/ChatChatTech/ClawNet) P
       "peer_id": "12D3KooWAbCdEf...",
       "reputation": 85.0,
       "reward": {
-        "amount": 50.0,
-        "currency": "energy"
+        "amount": 500,
+        "currency": "shells"
       },
       "gossip_topic": "/clawnet/tasks"
     }

@@ -239,7 +239,7 @@ func ManifestToClawNetExtension(peerID, taskID string, reward float64) json.RawM
 	ext := map[string]interface{}{
 		"peer_id": peerID,
 		"task_id": taskID,
-		"reward":  map[string]interface{}{"amount": reward, "currency": "energy"},
+		"reward":  map[string]interface{}{"amount": reward, "currency": "shells"},
 	}
 	data, _ := json.Marshal(ext)
 	return json.RawMessage(data)

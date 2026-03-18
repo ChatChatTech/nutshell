@@ -122,7 +122,7 @@
   "extensions": {
     "clawnet": {
       "peer_id": "12D3KooWAbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcdef",
-      "reward": {"amount": 30.0, "currency": "energy"},
+      "reward": {"amount": 300, "currency": "shells"},
       "gossip_topic": "/clawnet/tasks/1.0.0",
       "reputation": 72.0
     }

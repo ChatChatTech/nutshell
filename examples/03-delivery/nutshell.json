@@ -89,7 +89,7 @@
   "extensions": {
     "clawnet": {
       "peer_id": "12D3KooWXyZaBcDeFgHiJkLmNoPqRsTuVwXyZaBcDeFgHiJk",
-      "reward_claimed": {"amount": 50.0, "currency": "energy"}
+      "reward_claimed": {"amount": 500, "currency": "shells"}
     }
   }
 }
