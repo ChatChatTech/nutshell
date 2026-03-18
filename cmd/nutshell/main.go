@@ -271,7 +271,7 @@ var subHelpText = map[string]string{
 
   Flags:
     --dir, -d <path>       Source directory (default: .)
-    --reward <amount>      Reward in shells (default: 100, minimum: 100)
+    --reward <amount>      Reward in shells (0 for help-wanted, or >= 100)
     --peer <hex-pubkey>    Target peer (encrypts bundle + restricts task)
     --clawnet <addr>       ClawNet daemon address (default: http://localhost:3998)`,
 
@@ -1161,8 +1161,12 @@ func cmdPublish(args []string) {
 	var reward float64
 	if rewardStr != "" {
 		reward, err = strconv.ParseFloat(rewardStr, 64)
-		if err != nil || reward <= 0 {
-			fmt.Fprintf(os.Stderr, "%s✗%s Invalid --reward value: %s\n", red, reset, rewardStr)
+		if err != nil || reward < 0 {
+			fmt.Fprintf(os.Stderr, "%s✗%s Invalid --reward value: %s (must be 0 or >= 100)\n", red, reset, rewardStr)
+			os.Exit(1)
+		}
+		if reward > 0 && reward < 100 {
+			fmt.Fprintf(os.Stderr, "%s✗%s Reward must be 0 (help-wanted) or >= 100 shells. Got: %.0f\n", red, reset, reward)
 			os.Exit(1)
 		}
 	} else if ext, ok := manifest.Extensions["clawnet"]; ok {
@@ -1174,26 +1178,23 @@ func cmdPublish(args []string) {
 			}
 		}
 	}
-	// reward == 0 means use daemon default (100)
+	// reward == 0 means help-wanted task (free collaboration)
 
 	// Step 3: Check credit balance
 	credits, cerr := client.GetCreditBalance()
 	if cerr != nil {
 		fmt.Fprintf(os.Stderr, "%s⚠%s Could not check credit balance: %s\n", yellow, reset, cerr)
 	} else {
-		available := credits.Balance
+		available := credits.Balance - credits.Frozen
 		if credits.Energy > 0 {
-			available = credits.Energy
+			available = credits.Energy - credits.Frozen
 		}
 		fmt.Printf("%s▸%s ClawNet connected — %s (%s)%s\n", cyan, reset, status.AgentName, status.PeerID[:16]+"...", reset)
 		fmt.Printf("  %sCredits: %.1f available, %.1f frozen%s\n", dim, available, credits.Frozen, reset)
-		effectiveReward := reward
-		if effectiveReward == 0 {
-			effectiveReward = 100
-		}
-		if available < effectiveReward {
-			fmt.Fprintf(os.Stderr, "%s⚠%s Low credit balance (%.0f). Task reward is %.0f shells.\n", yellow, reset, available, effectiveReward)
-			fmt.Fprintf(os.Stderr, "  %sPublishing may fail if credits are insufficient.%s\n", dim, reset)
+		if reward > 0 && available < reward {
+			fmt.Fprintf(os.Stderr, "%s✗%s Insufficient credits. Available: %.0f, required: %.0f shells.\n", red, reset, available, reward)
+			fmt.Fprintf(os.Stderr, "  %sCheck balance: curl http://localhost:3998/api/credits/balance%s\n", dim, reset)
+			os.Exit(1)
 		}
 	}
 
@@ -1236,13 +1237,11 @@ func cmdPublish(args []string) {
 	task, err := client.PublishTask(&manifest, nutHash, reward, peerHex)
 	if err != nil {
 		errMsg := err.Error()
-		if strings.Contains(errMsg, "insufficient") || strings.Contains(errMsg, "credits") {
-			fmt.Fprintf(os.Stderr, "%s✗%s Insufficient credits to publish this task\n", red, reset)
-			effectiveReward := reward
-			if effectiveReward == 0 {
-				effectiveReward = 100
-			}
-			fmt.Fprintf(os.Stderr, "  %sTask reward is %.0f shells. Check balance: curl http://localhost:3998/api/credits/balance%s\n", dim, effectiveReward, reset)
+		if strings.Contains(errMsg, "reward_too_low") {
+			fmt.Fprintf(os.Stderr, "%s✗%s Reward too low. Minimum is 100 shells (or use --reward 0 for help-wanted).\n", red, reset)
+		} else if strings.Contains(errMsg, "insufficient") || strings.Contains(errMsg, "Insufficient") {
+			fmt.Fprintf(os.Stderr, "%s✗%s Insufficient credits to publish this task (reward: %.0f shells).\n", red, reset, reward)
+			fmt.Fprintf(os.Stderr, "  %sCheck balance: curl http://localhost:3998/api/credits/balance%s\n", dim, reset)
 		} else {
 			fmt.Fprintf(os.Stderr, "%s✗%s %s\n", red, reset, err)
 		}
@@ -1263,7 +1262,7 @@ func cmdPublish(args []string) {
 	updated, _ := json.MarshalIndent(manifest, "", "  ")
 	os.WriteFile(filepath.Join(dir, "nutshell.json"), updated, 0644)
 
-	fmt.Printf("%s✓%s Published to ClawNet network\n", green, reset)
+	fmt.Printf("\n%s✓%s Published to ClawNet network\n", green, reset)
 	fmt.Printf("  %sTask ID:  %s%s\n", dim, task.ID, reset)
 	fmt.Printf("  %sPeer:     %s (%s)%s\n", dim, status.AgentName, status.PeerID[:16]+"...", reset)
 	fmt.Printf("  %sReward:   %.0f shells%s\n", dim, task.Reward, reset)

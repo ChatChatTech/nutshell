@@ -92,9 +92,8 @@ func (c *ClawNetClient) PublishTask(m *Manifest, nutHash string, reward float64,
 	if m.ExpiresAt != "" {
 		body["deadline"] = m.ExpiresAt
 	}
-	if reward > 0 {
-		body["reward"] = reward
-	}
+	// reward >= 0 is valid: 0 means help-wanted, >0 means paid task
+	body["reward"] = reward
 
 	// Nutshell extension fields
 	if nutHash != "" {
@@ -118,11 +117,18 @@ func (c *ClawNetClient) PublishTask(m *Manifest, nutHash string, reward float64,
 		b, _ := io.ReadAll(resp.Body)
 		return nil, fmt.Errorf("task creation failed (%d): %s", resp.StatusCode, string(b))
 	}
-	var task ClawNetTask
-	if err := json.NewDecoder(resp.Body).Decode(&task); err != nil {
+	// ClawNet API wraps the task in {"task": {...}}
+	var envelope struct {
+		Task ClawNetTask `json:"task"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
 		return nil, fmt.Errorf("decoding task response: %w", err)
 	}
-	return &task, nil
+	// Fallback: if envelope.Task.ID is empty, try direct decode (older API versions)
+	if envelope.Task.ID == "" {
+		return nil, fmt.Errorf("task created but response missing task ID")
+	}
+	return &envelope.Task, nil
 }
 
 // UploadBundle uploads a .nut file to ClawNet as a task bundle attachment.
